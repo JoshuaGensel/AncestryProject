@@ -1,0 +1,142 @@
+
+initialize() {
+	
+	initializeSLiMModelType("nonWF");
+	
+	if (!exists("run"))
+		defineConstant("run", getSeed());
+	if (!exists("Tdiff"))
+		defineConstant("Tdiff", 100);
+	if (!exists("prop_p1m_in_p3"))
+		defineConstant("prop_p1m_in_p3", 50);
+	if (!exists("trees_directory"))
+		defineConstant("trees_directory", "./trees_Tdiff_"+Tdiff+"_SB_"+prop_p1m_in_p3+"/");
+	if (!exists("txt_directory"))
+		defineConstant("txt_directory", "./txt_Tdiff_"+Tdiff+"_SB_"+prop_p1m_in_p3+"/");
+	if (!exists("Ne"))
+		defineConstant("Ne", 5000);
+	if (!exists("Taa"))
+		defineConstant("Taa", c(5,10,20,30,40,50,100,200));
+	if (!exists("txt_OutFileName"))
+		defineConstant("txt_OutFileName", asString("Tdiff_"+Tdiff+"_SB_"+prop_p1m_in_p3+"_run_"+run+".txt"));
+	
+	defineConstant("simID", getSeed());
+	defineConstant("L_ychr", 899999);
+	defineConstant("L_mDNA", 16569);
+	defineConstant("L", L_mDNA+L_ychr);
+	defineConstant("freq_p1m_in_p3", prop_p1m_in_p3/100);
+	
+	initializeTreeSeq();
+	initializeSex("A");
+	initializeMutationRate(0);
+	// mtDNA-Marker
+	initializeMutationType("m1", 1.0, "f", 0.0);		
+	// YChrom-Marker
+	initializeMutationType("m2", 1.0, "f", 0.0);		
+	// p1-females-Marker
+	initializeMutationType("m3", 1.0, "f", 0.0);		
+	// p2-females-Marker
+	initializeMutationType("m4", 1.0, "f", 0.0);		
+	// p1-males-Marker
+	initializeMutationType("m5", 1.0, "f", 0.0);		
+	// p2-males-Marker
+	initializeMutationType("m6", 1.0, "f", 0.0);		
+	
+	
+	// mtDNA with mutation rate m1
+	initializeGenomicElementType("g1", m1, 1.0);
+	// Ychr with mutation rate m2
+	initializeGenomicElementType("g2", m2, 1.0);		
+	// mtDNA geneomic element
+	initializeGenomicElement(g1, 0, L_mDNA-1);	
+	// Ychr geneomic element
+	initializeGenomicElement(g2, L_mDNA, L);	
+	
+	// no need for recombination			
+	initializeRecombinationRate(0);
+	
+	m1.convertToSubstitution = F;
+	m2.convertToSubstitution = F;
+	m3.convertToSubstitution = F;
+	m4.convertToSubstitution = F;
+	m5.convertToSubstitution = F;
+	m6.convertToSubstitution = F;
+}
+
+
+reproduction() {
+	for (s in sim.subpopulations){
+		for (i in seqLen(Ne)){
+			mom = s.sampleIndividuals(1, sex = "F");
+			dad = s.sampleIndividuals(1, sex = "M");
+			s.addRecombinant(mom.genome1, NULL, NULL, dad.genome2, NULL, NULL);
+		}
+	}
+	self.active = 0;
+}
+
+// force non-overlapping populations in nonWF
+early() {
+	sim.subpopulations.individuals[sim.subpopulations.individuals.age > 0].fitnessScaling = 0;
+}
+
+
+// Tadmix - time since admixture (output treeSeq on generations: 10,100,200,300,400,500)
+late(){
+	if (sum(sim.generation == Tdiff + Taa) == 1)
+		{
+		trees_filename = asString("Tdiff_"+Tdiff+"_SB_"+prop_p1m_in_p3+"_T_"+(sim.generation - Tdiff)+"_run_"+run+".trees");
+		sim.treeSeqOutput(trees_directory + trees_filename);
+	}
+}
+
+
+1 early(){
+	sim.rescheduleScriptBlock(s1, Tdiff, Tdiff);
+	sim.rescheduleScriptBlock(s2, Tdiff, Tdiff + max(Taa));
+	sim.addSubpop("p0", Ne);
+	// add marker mutation for mtDNA
+	p0.individuals[p0.individuals.sex == "F"].genome1.addNewMutation(m1, 0.0, 0);
+	// add marker mutation for Ychr
+	p0.individuals[p0.individuals.sex == "M"].genome2.addNewMutation(m2, 0.0, L-1);
+	createDirectory(txt_directory);
+	createDirectory(trees_directory);
+
+}
+
+1 late(){
+	sim.addSubpop("p1", 0);
+	sim.addSubpop("p2", 0);
+	p1.takeMigrants(p0.sampleIndividuals(asInteger(Ne/2)));
+	p2.takeMigrants(p0.sampleIndividuals(asInteger(Ne/2)));
+	p0.removeSubpopulation();
+	// add marker mutation for females from p1
+	p1.individuals[p1.individuals.sex == "F"].genome1.addNewMutation(m3, 0.0, 10);
+	// add marker mutation for females from p2
+	p2.individuals[p2.individuals.sex == "F"].genome1.addNewMutation(m4, 0.0, 10);
+	// add marker mutation for males from p1
+	p1.individuals[p1.individuals.sex == "M"].genome2.addNewMutation(m5, 0.0, L-10);
+	// add marker mutation for males from p2
+	p2.individuals[p2.individuals.sex == "M"].genome2.addNewMutation(m6, 0.0, L-10);
+}
+
+s1 100 late(){
+	sim.addSubpop("p3", 0);
+	p3.takeMigrants(p1.sampleIndividuals(asInteger(Ne/8), sex = "F"));
+	p3.takeMigrants(p2.sampleIndividuals(asInteger(Ne/8), sex = "F"));
+	p3.takeMigrants(p1.sampleIndividuals(asInteger((Ne/4)*freq_p1m_in_p3), sex = "M"));
+	p3.takeMigrants(p2.sampleIndividuals(asInteger((Ne/4)*(1-freq_p1m_in_p3)), sex = "M"));
+	
+	// create headers for the txt file
+	writeFile(txt_directory + txt_OutFileName, paste("Tdiff", "run","gen","p1m_in_p3", "p2m_in_p3", "p1f_in_p3", "p2f_in_p3", sep="	"), append=F);
+}
+
+s2 101 late() {
+	p3m = p3.individuals[p3.individuals.sex == "M"];
+	p3f = p3.individuals[p3.individuals.sex == "F"];
+	p1f_in_p3 = sum(p3f.genome1.containsMarkerMutation(m3, 10)) / (sum(p3f.genome1.containsMarkerMutation(m3, 10)) + sum(p3f.genome1.containsMarkerMutation(m4, 10)));
+	p1m_in_p3 = sum(p3m.genome2.containsMarkerMutation(m5, L-10)) / (sum(p3m.genome2.containsMarkerMutation(m5, L-10)) + sum(p3m.genome2.containsMarkerMutation(m6, L-10)));
+	
+	// append in file freq over generations
+	writeFile(txt_directory + txt_OutFileName, paste(Tdiff, run, sim.generation, p1m_in_p3, (1-p1m_in_p3), p1f_in_p3, (1-p1f_in_p3), sep="	"), append = T);
+}
