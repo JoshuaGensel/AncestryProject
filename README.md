@@ -1,3 +1,3 @@
 # AncestryProject
 
-Collaboratory Popgen Simulationproject of Vladimir Bajic and Leon Joshua Gensel
+Collaboratory Popgen project of Vladimir Bajic and Leon Joshua Gensel using SLiM simulations
