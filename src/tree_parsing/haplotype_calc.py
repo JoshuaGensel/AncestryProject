@@ -2,15 +2,17 @@ from logging import FATAL
 #from numpy.lib.financial import rate
 from numpy.lib.function_base import append
 import pyslim
+from tqdm import tqdm
 import tskit
 import msprime
+import tsinfer
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
 import getopt, sys
 import re
 
-path = None
+path = "D:\Daten\programming_projects\AncestryProject\output\other\Tdiff_100_SB_50_T_200_run_2252115279.trees"
 nSamples = 10
 
 #Commandline options
@@ -37,7 +39,7 @@ def haplotypeCalc(input):
 
     #Importing and simplifying tree sequence
 
-    treeseq_raw = pyslim.load(input)
+    treeseq_raw = tskit.load(input)
     all_nodes = treeseq_raw.samples()
     nodes_F = []
     nodes_M = []
@@ -98,22 +100,29 @@ def haplotypeCalc(input):
     mts_mtDNA = mts_mtDNA.delete_sites([i.id for i in mts_mtDNA.sites() if i.position < 900000])  
     mts_YChrom = mts_YChrom.delete_sites([i.id for i in mts_YChrom.sites() if i.position >= 900000])
 
-    outputFile = inputFile.replace(".trees", "_mtDNA.txt")
-    output = open(outputFile, "w")
-    for h,v in zip(mts_mtDNA.haplotypes(), mts_mtDNA.samples()):
-        pop=sts_mtDNA.individual(v).metadata["subpopulation"]
-        output.write(f"Pop{pop}_Ind{v}\t"+h+"\n")
-    output.close()
+    progress = tqdm.tqdm(total = mts_mtDNA.num_sites)
+    with tsinfer.SampleData.from_tree_sequence(
+        mts_mtDNA, path = "mtDNAtest.samples", use_times = False
+    ) as mtDNA_sample_data:
+        for var in mts_mtDNA.variants():
+            mtDNA_sample_data.add_site(var.site.position, var.genotypes, var.alleles)
+            progress.update()
+        progress.close()
+    
+    # outputFile = inputFile.replace(".trees", "_mtDNA.txt")
+    # output = open(outputFile, "w")
+    # for h,v in zip(mts_mtDNA.haplotypes(), mts_mtDNA.samples()):
+    #     pop=sts_mtDNA.individual(v).metadata["subpopulation"]
+    #     output.write(f"Pop{pop}_Ind{v}\t"+h+"\n")
+    # output.close()
 
-    outputFile = inputFile.replace(".trees", "_YChrom.txt")
-    output = open(outputFile, "w")
-    for h,v in zip(mts_YChrom.haplotypes(), mts_YChrom.samples()):
-        pop=sts_YChrom.individual(v).metadata["subpopulation"]
-        output.write(f"Pop{pop}_Ind{v}\t"+h+"\n")
-    output.close()
+    # outputFile = inputFile.replace(".trees", "_YChrom.txt")
+    # output = open(outputFile, "w")
+    # for h,v in zip(mts_YChrom.haplotypes(), mts_YChrom.samples()):
+    #     pop=sts_YChrom.individual(v).metadata["subpopulation"]
+    #     output.write(f"Pop{pop}_Ind{v}\t"+h+"\n")
+    # output.close()
     
 
 
-inputFile = path
-
-haplotypeCalc(inputFile)
+haplotypeCalc(path)
