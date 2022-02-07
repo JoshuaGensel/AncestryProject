@@ -83,7 +83,7 @@ early() {
 
 // Tadmix - time since admixture (output treeSeq on generations: 10,100,200,300,400,500)
 late(){
-	if (sum(sim.generation == Tdiff + Taa) == 1)
+	if (sum(sim.generation == Tdiff + Taa + 100000) == 1)
 		{
 		trees_filename = asString("Tdiff_"+Tdiff+"_SB_"+prop_p1m_in_p3+"_T_"+(sim.generation - Tdiff)+"_run_"+run+".trees");
 		sim.treeSeqOutput(trees_directory + trees_filename);
