@@ -10,11 +10,11 @@ initialize() {
 	if (!exists("prop_p1m_in_p3"))
 		defineConstant("prop_p1m_in_p3", 50);
 	if (!exists("trees_directory"))
-		defineConstant("trees_directory", "./trees_Tdiff_"+Tdiff+"_SB_"+prop_p1m_in_p3+"/");
+		defineConstant("trees_directory", "D:/Daten/programming_projects/AncestryProject/output/other/");
 	if (!exists("txt_directory"))
-		defineConstant("txt_directory", "./txt_Tdiff_"+Tdiff+"_SB_"+prop_p1m_in_p3+"/");
+		defineConstant("txt_directory", "D:/Daten/programming_projects/AncestryProject/output/other/");
 	if (!exists("Ne"))
-		defineConstant("Ne", 5000);
+		defineConstant("Ne", 500);
 	if (!exists("Taa"))
 		defineConstant("Taa", c(5,10,20,30,40,50,100,200));
 	if (!exists("txt_OutFileName"))
@@ -92,19 +92,12 @@ late(){
 
 
 1 early(){
-	sim.rescheduleScriptBlock(s1, Tdiff, Tdiff);
-	sim.rescheduleScriptBlock(s2, Tdiff, Tdiff + max(Taa));
-	sim.addSubpop("p0", Ne);
-	// add marker mutation for mtDNA
-	p0.individuals[p0.individuals.sex == "F"].genome1.addNewMutation(m1, 0.0, 0);
-	// add marker mutation for Ychr
-	p0.individuals[p0.individuals.sex == "M"].genome2.addNewMutation(m2, 0.0, L-1);
-	createDirectory(txt_directory);
-	createDirectory(trees_directory);
-
+	sim.rescheduleScriptBlock(s1, Tdiff+100000, Tdiff+100000);
+	sim.rescheduleScriptBlock(s2, Tdiff+100000, Tdiff + max(Taa) + 100000);
+	sim.readFromPopulationFile("D:/Daten/programming_projects/AncestryProject/data/burnin.trees");
 }
 
-1 late(){
+100002 late(){
 	sim.addSubpop("p1", 0);
 	sim.addSubpop("p2", 0);
 	p1.takeMigrants(p0.sampleIndividuals(asInteger(Ne/2)));
