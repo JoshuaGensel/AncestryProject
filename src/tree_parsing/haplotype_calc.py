@@ -119,9 +119,7 @@ def haplotypeCalc(input):
         # May also need to convert top level metadata?
         return new_tables.tree_sequence()
 
-    print(mts_mtDNA.draw_text())
-    mts_mtDNA.dump("D:/Daten/programming_projects/AncestryProject/output/other/mtDNA_test_tree.trees")
-    # mtDNA_samplets = convert_to_json_metadata(mts_mtDNA)
+    mtDNA_samplets = convert_to_json_metadata(mts_mtDNA)
     
     # mtDNA_sample_data = tsinfer.SampleData.from_tree_sequence(mtDNA_samplets, path = "mtDNAtest.samples")
     # inferred_tree_mtDNA = tsinfer.infer(sample_data= mtDNA_sample_data)
