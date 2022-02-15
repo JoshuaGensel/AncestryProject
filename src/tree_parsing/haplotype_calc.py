@@ -2,6 +2,7 @@ from logging import FATAL
 #from numpy.lib.financial import rate
 from numpy.lib.function_base import append
 import pyslim
+import json
 import tqdm
 import tskit
 import msprime
@@ -59,9 +60,6 @@ def haplotypeCalc(input):
     if(treeseq_mtDNA.num_trees != 1): raise ValueError("more than one tree!")
     if(treeseq_YChrom.num_trees != 1): raise ValueError("more than one tree!")
 
-    #rts_mtDNA = pyslim.recapitate(treeseq_mtDNA, recombination_rate=0, ancestral_Ne= 5000, random_seed=1)
-    #rts_YChrom = pyslim.recapitate(treeseq_YChrom, recombination_rate=0, ancestral_Ne= 5000, random_seed=1)
-
     if(treeseq_mtDNA.first().num_roots > 1): raise ValueError("more than one root!")
     if(treeseq_YChrom.first().num_roots > 1): raise ValueError("more than one root!")
 
@@ -100,17 +98,30 @@ def haplotypeCalc(input):
 
     mts_mtDNA = mts_mtDNA.delete_sites([i.id for i in mts_mtDNA.sites() if i.position < 900000])  
     mts_YChrom = mts_YChrom.delete_sites([i.id for i in mts_YChrom.sites() if i.position >= 900000])
+    
+    def convert_to_json_metadata(ts):
+    # make a new ts with json metadata
+        new_tables = ts.dump_tables()
+        # iterate through (nearly) all the tables
+        for table_name, table in new_tables.name_map.items():
+            # provenance table doesn't have metadata
+            if table_name not in ["provenances"]:
+                # packset_metadata doesn't validate, so dump json in here and switch schema after
+                table.packset_metadata([json.dumps(row.metadata).encode() for row in table])
+                table.metadata_schema = tskit.MetadataSchema({'codec': 'json'})
+        # May also need to convert top level metadata?
+        return new_tables.tree_sequence()
 
-    #for i in mts_mtDNA.individuals(): i.metadata = tskit.TableCollection()
-    #for i in mts_mtDNA.mutations(): i.metadata = tskit.TableCollection()
-    #for i in mts_mtDNA.nodes(): i.metadata = tskit.TableCollection()
-
-    print(mts_mtDNA.table_metadata_schemas.individual)
-    #mts_mtDNA.mutations().metadata = tskit.TableCollection()
-    #mts_mtDNA.nodes().metadata = tskit.TableCollection()
-    mtDNA_sample_data = tsinfer.SampleData.from_tree_sequence(mts_mtDNA, path = "mtDNAtest.samples")
+    mtDNA_samplets = convert_to_json_metadata(mts_mtDNA)
+    
+    mtDNA_sample_data = tsinfer.SampleData.from_tree_sequence(mtDNA_samplets, path = "mtDNAtest.samples")
     inferred_tree_mtDNA = tsinfer.infer(sample_data= mtDNA_sample_data)
-    inferred_tree_mtDNA.dump(path)
+ 
+    print("SLiM-Tree mtDNA:")
+    print(mts_mtDNA.draw_text())
+    print("Inferred tsinfer-Tree mtDNA:")
+    print(inferred_tree_mtDNA.draw_text())
+    
     # outputFile = inputFile.replace(".trees", "_mtDNA.txt")
     # output = open(outputFile, "w")
     # for h,v in zip(mts_mtDNA.haplotypes(), mts_mtDNA.samples()):
