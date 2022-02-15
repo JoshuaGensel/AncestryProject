@@ -100,27 +100,36 @@ def haplotypeCalc(input):
     mts_YChrom = mts_YChrom.delete_sites([i.id for i in mts_YChrom.sites() if i.position >= 900000])
     
     def convert_to_json_metadata(ts):
-    # make a new ts with json metadata
+        # make a new ts with json metadata
         new_tables = ts.dump_tables()
         # iterate through (nearly) all the tables
         for table_name, table in new_tables.name_map.items():
             # provenance table doesn't have metadata
             if table_name not in ["provenances"]:
+                metadata = []
+                for row in table:
+                    try:
+                        row_metadata = row.metadata or {}
+                        metadata.append(json.dumps(row_metadata).encode())
+                    except TypeError:
+                        raise TypeError(f"Can't convert {row.metadata} to JSON")
                 # packset_metadata doesn't validate, so dump json in here and switch schema after
-                table.packset_metadata([json.dumps(row.metadata).encode() for row in table])
+                table.packset_metadata(metadata)
                 table.metadata_schema = tskit.MetadataSchema({'codec': 'json'})
         # May also need to convert top level metadata?
         return new_tables.tree_sequence()
 
-    mtDNA_samplets = convert_to_json_metadata(mts_mtDNA)
-    
-    mtDNA_sample_data = tsinfer.SampleData.from_tree_sequence(mtDNA_samplets, path = "mtDNAtest.samples")
-    inferred_tree_mtDNA = tsinfer.infer(sample_data= mtDNA_sample_data)
- 
-    print("SLiM-Tree mtDNA:")
     print(mts_mtDNA.draw_text())
-    print("Inferred tsinfer-Tree mtDNA:")
-    print(inferred_tree_mtDNA.draw_text())
+    mts_mtDNA.dump("D:/Daten/programming_projects/AncestryProject/output/other/mtDNA_test_tree.trees")
+    # mtDNA_samplets = convert_to_json_metadata(mts_mtDNA)
+    
+    # mtDNA_sample_data = tsinfer.SampleData.from_tree_sequence(mtDNA_samplets, path = "mtDNAtest.samples")
+    # inferred_tree_mtDNA = tsinfer.infer(sample_data= mtDNA_sample_data)
+ 
+    # print("SLiM-Tree mtDNA:")
+    # print(mts_mtDNA.draw_text())
+    # print("Inferred tsinfer-Tree mtDNA:")
+    # print(inferred_tree_mtDNA.draw_text())
     
     # outputFile = inputFile.replace(".trees", "_mtDNA.txt")
     # output = open(outputFile, "w")
