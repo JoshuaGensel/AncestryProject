@@ -3,7 +3,6 @@ from logging import FATAL
 from numpy.lib.function_base import append
 import pyslim
 import json
-import tqdm
 import tskit
 import msprime
 import tsinfer
@@ -121,27 +120,17 @@ def haplotypeCalc(input):
 
     mtDNA_samplets = convert_to_json_metadata(mts_mtDNA)
     
-    # mtDNA_sample_data = tsinfer.SampleData.from_tree_sequence(mtDNA_samplets, path = "mtDNAtest.samples")
-    # inferred_tree_mtDNA = tsinfer.infer(sample_data= mtDNA_sample_data)
+    with tsinfer.SampleData(
+        path="simulation.samples", sequence_length=mtDNA_samplets.sequence_length, num_flush_threads=2
+    ) as sample_data:
+        for var in mtDNA_samplets.variants():
+            sample_data.add_site(var.site.position, var.genotypes, var.alleles)
+    inferred_tree_mtDNA = tsinfer.infer(sample_data= sample_data)
  
-    # print("SLiM-Tree mtDNA:")
-    # print(mts_mtDNA.draw_text())
-    # print("Inferred tsinfer-Tree mtDNA:")
-    # print(inferred_tree_mtDNA.draw_text())
-    
-    # outputFile = inputFile.replace(".trees", "_mtDNA.txt")
-    # output = open(outputFile, "w")
-    # for h,v in zip(mts_mtDNA.haplotypes(), mts_mtDNA.samples()):
-    #     pop=sts_mtDNA.individual(v).metadata["subpopulation"]
-    #     output.write(f"Pop{pop}_Ind{v}\t"+h+"\n")
-    # output.close()
-
-    # outputFile = inputFile.replace(".trees", "_YChrom.txt")
-    # output = open(outputFile, "w")
-    # for h,v in zip(mts_YChrom.haplotypes(), mts_YChrom.samples()):
-    #     pop=sts_YChrom.individual(v).metadata["subpopulation"]
-    #     output.write(f"Pop{pop}_Ind{v}\t"+h+"\n")
-    # output.close()
+    print("SLiM-Tree mtDNA:")
+    print(mts_mtDNA.draw_text())
+    print("Inferred tsinfer-Tree mtDNA:")
+    print(inferred_tree_mtDNA.draw_text())
     
 
 
