@@ -1,5 +1,4 @@
 from logging import FATAL
-#from numpy.lib.financial import rate
 from numpy.lib.function_base import append
 import pyslim
 import json
@@ -7,13 +6,13 @@ import tskit
 import msprime
 import tsinfer
 import numpy as np
-import pandas as pd
-from pandas import DataFrame
 import getopt, sys
 import re
+import os
 
-path = "D:\Daten\programming_projects\AncestryProject\output\other\Tdiff_100_SB_50_T_100200_run_3473623206.trees"
+path = "D:/Daten/programming_projects/AncestryProject/output/ts_raw/Tdiff_100_SB_50_T_200_run_641774310.trees"
 nSamples = 10
+ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),'..','..'))
 
 #Commandline options
 
@@ -35,11 +34,13 @@ for current_argument, current_value in arguments:
         nSamples = int(current_value)
 
 
-def haplotypeCalc(input):
+def haplotypeCalc(path):
 
+    head, tail = os.path.split(path)
+    inputFileName = tail
     #Importing and simplifying tree sequence
 
-    treeseq_raw = pyslim.load(input)
+    treeseq_raw = pyslim.load(path)
     all_nodes = treeseq_raw.samples()
     nodes_F = []
     nodes_M = []
@@ -74,7 +75,9 @@ def haplotypeCalc(input):
             nodes_F_p3.extend(treeseq_mtDNA.individual(i).nodes)
         else:
             raise ValueError("Individual without population!")
-    keep_nodes_F = np.concatenate((np.random.choice(nodes_F_p1, nSamples, replace=False), np.random.choice(nodes_F_p2, nSamples, replace=False), np.random.choice(nodes_F_p3, nSamples, replace=False)))
+    keep_nodes_F = np.concatenate((np.random.choice(nodes_F_p1, nSamples, replace=False), 
+                                   np.random.choice(nodes_F_p2, nSamples, replace=False), 
+                                   np.random.choice(nodes_F_p3, nSamples, replace=False)))
     sts_mtDNA = treeseq_mtDNA.simplify(keep_nodes_F)
 
     nodes_M_p1 = []
@@ -89,7 +92,9 @@ def haplotypeCalc(input):
             nodes_M_p3.extend(treeseq_YChrom.individual(i).nodes)
         else:
             raise ValueError("Individual without population!")
-    keep_nodes_M = np.concatenate((np.random.choice(nodes_M_p1, nSamples, replace=False), np.random.choice(nodes_M_p2, nSamples, replace=False), np.random.choice(nodes_M_p3, nSamples, replace=False)))
+    keep_nodes_M = np.concatenate((np.random.choice(nodes_M_p1, nSamples, replace=False), 
+                                   np.random.choice(nodes_M_p2, nSamples, replace=False), 
+                                   np.random.choice(nodes_M_p3, nSamples, replace=False)))
     sts_YChrom = treeseq_YChrom.simplify(keep_nodes_M)
 
     mts_mtDNA = msprime.mutate(sts_mtDNA, rate=6.85*10**-7, random_seed=1, keep=False)
@@ -97,6 +102,9 @@ def haplotypeCalc(input):
 
     mts_mtDNA = mts_mtDNA.delete_sites([i.id for i in mts_mtDNA.sites() if i.position < 900000])  
     mts_YChrom = mts_YChrom.delete_sites([i.id for i in mts_YChrom.sites() if i.position >= 900000])
+    
+    mts_mtDNA.dump(os.path.join(ROOT_DIR, 'output', 'ts_parsed', inputFileName.replace('.trees', '_mtDNA.trees')))
+    mts_YChrom.dump(os.path.join(ROOT_DIR, 'output', 'ts_parsed', inputFileName.replace('.trees', '_YChrom.trees')))
     
     def convert_to_json_metadata(ts):
         # make a new ts with json metadata
@@ -119,18 +127,41 @@ def haplotypeCalc(input):
         return new_tables.tree_sequence()
 
     mtDNA_samplets = convert_to_json_metadata(mts_mtDNA)
+    YChrom_samplets = convert_to_json_metadata(mts_YChrom)
     
     with tsinfer.SampleData(
-        path="simulation.samples", sequence_length=mtDNA_samplets.sequence_length, num_flush_threads=2
+        path=os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_mtDNA.samples')), 
+        sequence_length=mtDNA_samplets.sequence_length, 
+        num_flush_threads=2
     ) as sample_data:
         for var in mtDNA_samplets.variants():
             sample_data.add_site(var.site.position, var.genotypes, var.alleles)
     inferred_tree_mtDNA = tsinfer.infer(sample_data= sample_data)
+    
+    with tsinfer.SampleData(
+        path=os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_YChrom.samples')), 
+        sequence_length=YChrom_samplets.sequence_length, 
+        num_flush_threads=2
+    ) as sample_data:
+        for var in YChrom_samplets.variants():
+            sample_data.add_site(var.site.position, var.genotypes, var.alleles)
+    inferred_tree_YChrom = tsinfer.infer(sample_data= sample_data)
+    
+    inferred_tree_mtDNA.dump(os.path.join(ROOT_DIR, 'output', 'ts_inferred', inputFileName.replace('.trees', '_mtDNA.trees')))
+    inferred_tree_YChrom.dump(os.path.join(ROOT_DIR, 'output', 'ts_inferred', inputFileName.replace('.trees', '_YChrom.trees')))    
  
-    print("SLiM-Tree mtDNA:")
-    print(mts_mtDNA.draw_text())
-    print("Inferred tsinfer-Tree mtDNA:")
-    print(inferred_tree_mtDNA.draw_text())
+    output = open(os.path.join(ROOT_DIR, 'output', 'haplotypes', inputFileName.replace('.trees', '_mtDNA.txt')), "w")
+    for h,v in zip(mts_mtDNA.haplotypes(), mts_mtDNA.samples()):
+        pop=sts_mtDNA.individual(v).metadata["subpopulation"]
+        output.write(f"Pop{pop}_Ind{v}\t"+h+"\n")
+    output.close()
+
+    output = open(os.path.join(ROOT_DIR, 'output', 'haplotypes', inputFileName.replace('.trees', '_YChrom.txt')), "w")
+    for h,v in zip(mts_YChrom.haplotypes(), mts_YChrom.samples()):
+        pop=sts_YChrom.individual(v).metadata["subpopulation"]
+        output.write(f"Pop{pop}_Ind{v}\t"+h+"\n")
+    output.close()
+    
     
 
 
