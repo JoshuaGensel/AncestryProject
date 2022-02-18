@@ -10,6 +10,8 @@ import getopt, sys
 import re
 import os
 
+#default values for important variables
+
 path = "D:/Daten/programming_projects/AncestryProject/output/ts_raw/Tdiff_100_SB_50_T_200_run_641774310.trees"
 nSamples = 10
 ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),'..','..'))
@@ -36,10 +38,11 @@ for current_argument, current_value in arguments:
 
 def haplotypeCalc(path):
 
+    #saving the name of the .trees input file
     head, tail = os.path.split(path)
     inputFileName = tail
-    #Importing and simplifying tree sequence
-
+    
+    #Importing and simplifying tree sequence to nodes that resemble mtDNA of females or Y-chromosome of males
     ts_raw = pyslim.load(path)
     all_nodes = ts_raw.samples()
     nodes_F = []
@@ -57,12 +60,15 @@ def haplotypeCalc(path):
     ts_M_raw = ts_raw.simplify(samples=nodes_F)
     ts_Y_raw = ts_raw.simplify(samples=nodes_M)
 
+    #Checking that there is now only 1 tree with 1 root for mtDNA and Y-chromosome
     if(ts_M_raw.num_trees != 1): raise ValueError("more than one tree!")
     if(ts_Y_raw.num_trees != 1): raise ValueError("more than one tree!")
 
     if(ts_M_raw.first().num_roots > 1): raise ValueError("more than one root!")
     if(ts_Y_raw.first().num_roots > 1): raise ValueError("more than one root!")
 
+    #randomly sampling n = nSamples number of female individuals per subpopulation
+    #than simplifying down to only consider these samples
     nodes_F_p1 = []
     nodes_F_p2 = []
     nodes_F_p3 = []
@@ -80,6 +86,7 @@ def haplotypeCalc(path):
                                    np.random.choice(nodes_F_p3, nSamples, replace=False)))
     sts_M = ts_M_raw.simplify(keep_nodes_F)
 
+    #now same sampling procedure for males
     nodes_M_p1 = []
     nodes_M_p2 = []
     nodes_M_p3 = []
@@ -97,15 +104,20 @@ def haplotypeCalc(path):
                                    np.random.choice(nodes_M_p3, nSamples, replace=False)))
     sts_Y = ts_Y_raw.simplify(keep_nodes_M)
 
+    #overlaying mutations on the tree sequences with msprime
     mts_M = msprime.mutate(sts_M, rate=6.85*10**-7, random_seed=1, keep=False)
     mts_Y = msprime.mutate(sts_Y, rate=3.01*10**-8, random_seed=1, keep=False)
 
+    #deleting mutations in the wrong region (i.e. mutations in the mtDNA of a node that is supposed to be a Y-chromosome)
     mts_M = mts_M.delete_sites([i.id for i in mts_M.sites() if i.position < 900000])  
     mts_Y = mts_Y.delete_sites([i.id for i in mts_Y.sites() if i.position >= 900000])
     
+    #saving the parsed SLiM - tree sequences
     mts_M.dump(os.path.join(ROOT_DIR, 'output', 'ts_parsed', inputFileName.replace('.trees', '_mtDNA.trees')))
     mts_Y.dump(os.path.join(ROOT_DIR, 'output', 'ts_parsed', inputFileName.replace('.trees', '_YChrom.trees')))
     
+    #function to convert the binary metadata of SLiM - tree sequences to json
+    #taken from https://github.com/tskit-dev/tsinfer/discussions/629
     def convert_to_json_metadata(ts):
         # make a new ts with json metadata
         new_tables = ts.dump_tables()
@@ -126,9 +138,12 @@ def haplotypeCalc(path):
         # May also need to convert top level metadata?
         return new_tables.tree_sequence()
 
+    #converting the metadatas of the SLiM - tree sequences
     sample_ts_M = convert_to_json_metadata(mts_M)
     sample_ts_Y = convert_to_json_metadata(mts_Y)
     
+    #using tsinfer to generate inferred tree sequences based only on the mutations
+    #first for mtDNA tree sequences
     with tsinfer.SampleData(
         path=os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_mtDNA.samples')), 
         sequence_length=sample_ts_M.sequence_length, 
@@ -138,6 +153,7 @@ def haplotypeCalc(path):
             sample_data_M.add_site(var.site.position, var.genotypes, var.alleles)
     its_M = tsinfer.infer(sample_data= sample_data_M)
     
+    #here for Y-chromosome tree sequences
     with tsinfer.SampleData(
         path=os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_YChrom.samples')), 
         sequence_length=sample_ts_Y.sequence_length, 
@@ -147,21 +163,25 @@ def haplotypeCalc(path):
             sample_data_Y.add_site(var.site.position, var.genotypes, var.alleles)
     its_Y = tsinfer.infer(sample_data= sample_data_Y)
     
+    #saving teh inferred tree sequences
     its_M.dump(os.path.join(ROOT_DIR, 'output', 'ts_inferred', inputFileName.replace('.trees', '_mtDNA.trees')))
     its_Y.dump(os.path.join(ROOT_DIR, 'output', 'ts_inferred', inputFileName.replace('.trees', '_YChrom.trees')))
     
+    #closing and deleting the temporary .samles files of tsinfer because they are HUGE
     sample_data_Y.close()
     sample_data_M.close()
     os.remove(os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_mtDNA.samples')))
     os.remove(os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_YChrom.samples')))
     
- 
+    #outputting haplotypes of the sampled individuals in textformat
+    #first for mtDNA
     output = open(os.path.join(ROOT_DIR, 'output', 'haplotypes', inputFileName.replace('.trees', '_mtDNA.txt')), "w")
     for h,v in zip(mts_M.haplotypes(), mts_M.samples()):
         pop=sts_M.individual(v).metadata["subpopulation"]
         output.write(f"Pop{pop}_Ind{v}\t"+h+"\n")
     output.close()
 
+    #here for Y-chromosome
     output = open(os.path.join(ROOT_DIR, 'output', 'haplotypes', inputFileName.replace('.trees', '_YChrom.txt')), "w")
     for h,v in zip(mts_Y.haplotypes(), mts_Y.samples()):
         pop=sts_Y.individual(v).metadata["subpopulation"]
