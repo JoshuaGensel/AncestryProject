@@ -5,8 +5,8 @@ initialize() {
 	
 	if (!exists("run"))
 		defineConstant("run", getSeed());
-	if (!exists("Tdiff"))
-		defineConstant("Tdiff", 100);
+	if (!exists("Td"))
+		defineConstant("Td", 100);
 	if (!exists("prop_p1m_in_p3"))
 		defineConstant("prop_p1m_in_p3", 50);
 	if (!exists("trees_directory"))
@@ -18,13 +18,25 @@ initialize() {
 	if (!exists("Taa"))
 		defineConstant("Taa", c(5,10,20,30,40,50,100,200));
 	if (!exists("txt_OutFileName"))
-		defineConstant("txt_OutFileName", asString("Tdiff_"+Tdiff+"_SB_"+prop_p1m_in_p3+"_run_"+run+".txt"));
+		defineConstant("txt_OutFileName", asString("Td_"+Td+"_SB_"+prop_p1m_in_p3+"_run_"+run+".txt"));
+	if (!exists("burnin_file"))
+		defineConstant("burnin_file", "D:/Daten/programming_projects/AncestryProject/data/burnin.trees")
 	
 	defineConstant("simID", getSeed());
-	defineConstant("L_ychr", 899999);
-	defineConstant("L_mDNA", 16569);
-	defineConstant("L", L_mDNA+L_ychr);
+	defineConstant("L_Y", 899999);
+	defineConstant("L_M", 16569);
+	defineConstant("L", L_M+L_Y);
 	defineConstant("freq_p1m_in_p3", prop_p1m_in_p3/100);
+
+	/*
+	Variable names:
+	Ne	-	effective populationsize of all the populations
+	Td	-	Time between the initial split of p1 and p2 and the admixture of the two
+	Taa	-	Time that passed since the admixture event
+	L/L_Y/L_M	-	length of the genomic elements in total/for the Y-chromosome/mtDNA
+	prop_p1m_in_p3	-	probability for a male on p1 to migrate to p3 during the admixture event;
+						this enforces the desired admixture proportion
+	*/
 	
 	initializeTreeSeq();
 	initializeSex("A");
@@ -48,9 +60,9 @@ initialize() {
 	// Ychr with mutation rate m2
 	initializeGenomicElementType("g2", m2, 1.0);		
 	// mtDNA geneomic element
-	initializeGenomicElement(g1, 0, L_mDNA-1);	
+	initializeGenomicElement(g1, 0, L_M-1);	
 	// Ychr geneomic element
-	initializeGenomicElement(g2, L_mDNA, L);	
+	initializeGenomicElement(g2, L_M, L);	
 	
 	// no need for recombination			
 	initializeRecombinationRate(0);
@@ -63,7 +75,7 @@ initialize() {
 	m6.convertToSubstitution = F;
 }
 
-
+// random sexual reproduction with correct inheritance of mtDNA and Y-chromosome
 reproduction() {
 	for (s in sim.subpopulations){
 		for (i in seqLen(Ne)){
@@ -81,20 +93,20 @@ early() {
 }
 
 
-// Tadmix - time since admixture (output treeSeq on generations: 10,100,200,300,400,500)
+// Taa - time since admixture (output treeSeq on generations: 10,100,200,300,400,500)
 late(){
-	if (sum(sim.generation == Tdiff + Taa + 100000) == 1)
+	if (sum(sim.generation == Td + Taa + 100000) == 1)
 		{
-		trees_filename = asString("Tdiff_"+Tdiff+"_SB_"+prop_p1m_in_p3+"_T_"+(sim.generation - Tdiff - 100000)+"_run_"+run+".trees");
+		trees_filename = asString("Td_"+Td+"_SB_"+prop_p1m_in_p3+"_T_"+(sim.generation - Td - 100000)+"_run_"+run+".trees");
 		sim.treeSeqOutput(trees_directory + trees_filename);
 	}
 }
 
-
+// reading in burnin file
 1 early(){
-	sim.rescheduleScriptBlock(s1, Tdiff+100000, Tdiff+100000);
-	sim.rescheduleScriptBlock(s2, Tdiff+100000, Tdiff + max(Taa) + 100000);
-	sim.readFromPopulationFile("D:/Daten/programming_projects/AncestryProject/data/burnin.trees");
+	sim.rescheduleScriptBlock(s1, Td+100000, Td+100000);
+	sim.rescheduleScriptBlock(s2, Td+100000, Td + max(Taa) + 100000);
+	sim.readFromPopulationFile(burnin_file);
 }
 
 100002 late(){
@@ -121,7 +133,7 @@ s1 100 late(){
 	p3.takeMigrants(p2.sampleIndividuals(asInteger((Ne/4)*(1-freq_p1m_in_p3)), sex = "M"));
 	
 	// create headers for the txt file
-	writeFile(txt_directory + txt_OutFileName, paste("Tdiff", "run","gen","p1m_in_p3", "p2m_in_p3", "p1f_in_p3", "p2f_in_p3", sep="	"), append=F);
+	writeFile(txt_directory + txt_OutFileName, paste("Td", "run","gen","p1m_in_p3", "p2m_in_p3", "p1f_in_p3", "p2f_in_p3", sep="	"), append=F);
 }
 
 s2 101 late() {
@@ -131,5 +143,5 @@ s2 101 late() {
 	p1m_in_p3 = sum(p3m.genome2.containsMarkerMutation(m5, L-10)) / (sum(p3m.genome2.containsMarkerMutation(m5, L-10)) + sum(p3m.genome2.containsMarkerMutation(m6, L-10)));
 	
 	// append in file freq over generations
-	writeFile(txt_directory + txt_OutFileName, paste(Tdiff, run, sim.generation, p1m_in_p3, (1-p1m_in_p3), p1f_in_p3, (1-p1f_in_p3), sep="	"), append = T);
+	writeFile(txt_directory + txt_OutFileName, paste(Td, run, sim.generation, p1m_in_p3, (1-p1m_in_p3), p1f_in_p3, (1-p1f_in_p3), sep="	"), append = T);
 }
