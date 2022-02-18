@@ -137,7 +137,6 @@ def haplotypeCalc(path):
         for var in sample_ts_M.variants():
             sample_data_M.add_site(var.site.position, var.genotypes, var.alleles)
     its_M = tsinfer.infer(sample_data= sample_data_M)
-    print(its_M.draw_text())
     
     with tsinfer.SampleData(
         path=os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_YChrom.samples')), 
@@ -147,7 +146,6 @@ def haplotypeCalc(path):
         for var in sample_ts_Y.variants():
             sample_data_Y.add_site(var.site.position, var.genotypes, var.alleles)
     its_Y = tsinfer.infer(sample_data= sample_data_Y)
-    print(its_Y.draw_text())
     
     its_M.dump(os.path.join(ROOT_DIR, 'output', 'ts_inferred', inputFileName.replace('.trees', '_mtDNA.trees')))
     its_Y.dump(os.path.join(ROOT_DIR, 'output', 'ts_inferred', inputFileName.replace('.trees', '_YChrom.trees')))
