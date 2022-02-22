@@ -4,9 +4,9 @@ initialize() {
 	initializeSLiMModelType("nonWF");
 	
 	defineConstant("Ne", 5000);
-	defineConstant("L_ychr", 899999);
-	defineConstant("L_mDNA", 16569);
-	defineConstant("L", L_mDNA+L_ychr);
+	defineConstant("L_Y", 899999);
+	defineConstant("L_M", 16569);
+	defineConstant("L", L_M+L_Y);
 	
 	initializeTreeSeq();
 	initializeSex("A");
@@ -23,9 +23,9 @@ initialize() {
 	// Ychr with mutation rate m2
 	initializeGenomicElementType("g2", m2, 1.0);		
 	// mtDNA geneomic element
-	initializeGenomicElement(g1, 0, L_mDNA-1);	
+	initializeGenomicElement(g1, 0, L_M-1);	
 	// Ychr geneomic element
-	initializeGenomicElement(g2, L_mDNA, L);	
+	initializeGenomicElement(g2, L_M, L);	
 	
 	// no need for recombination			
 	initializeRecombinationRate(0);
