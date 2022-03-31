@@ -9,6 +9,7 @@ import numpy as np
 import getopt, sys
 import re
 import os
+import textwrap
 
 #default values for important variables
 
@@ -113,8 +114,8 @@ def haplotypeCalc(path):
     mts_Y = mts_Y.delete_sites([i.id for i in mts_Y.sites() if i.position >= 900000])
     
     #saving the parsed SLiM - tree sequences
-    mts_M.dump(os.path.join(ROOT_DIR, 'output', 'ts_parsed', inputFileName.replace('.trees', '_mtDNA.trees')))
-    mts_Y.dump(os.path.join(ROOT_DIR, 'output', 'ts_parsed', inputFileName.replace('.trees', '_YChrom.trees')))
+    mts_M.dump(os.path.join(ROOT_DIR, 'output', 'ts_parsed', inputFileName.replace('.trees', '_M.trees')))
+    mts_Y.dump(os.path.join(ROOT_DIR, 'output', 'ts_parsed', inputFileName.replace('.trees', '_Y.trees')))
     
     #function to convert the binary metadata of SLiM - tree sequences to json
     #taken from https://github.com/tskit-dev/tsinfer/discussions/629
@@ -145,7 +146,7 @@ def haplotypeCalc(path):
     #using tsinfer to generate inferred tree sequences based only on the mutations
     #first for mtDNA tree sequences
     with tsinfer.SampleData(
-        path=os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_mtDNA.samples')), 
+        path=os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_M.samples')), 
         sequence_length=sample_ts_M.sequence_length, 
         num_flush_threads=2
     ) as sample_data_M:
@@ -155,7 +156,7 @@ def haplotypeCalc(path):
     
     #here for Y-chromosome tree sequences
     with tsinfer.SampleData(
-        path=os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_YChrom.samples')), 
+        path=os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_Y.samples')), 
         sequence_length=sample_ts_Y.sequence_length, 
         num_flush_threads=2
     ) as sample_data_Y:
@@ -164,29 +165,36 @@ def haplotypeCalc(path):
     its_Y = tsinfer.infer(sample_data= sample_data_Y)
     
     #saving teh inferred tree sequences
-    its_M.dump(os.path.join(ROOT_DIR, 'output', 'ts_inferred', inputFileName.replace('.trees', '_mtDNA.trees')))
-    its_Y.dump(os.path.join(ROOT_DIR, 'output', 'ts_inferred', inputFileName.replace('.trees', '_YChrom.trees')))
+    its_M.dump(os.path.join(ROOT_DIR, 'output', 'ts_inferred', inputFileName.replace('.trees', '_M.trees')))
+    its_Y.dump(os.path.join(ROOT_DIR, 'output', 'ts_inferred', inputFileName.replace('.trees', '_Y.trees')))
     
     #closing and deleting the temporary .samles files of tsinfer because they are HUGE
     sample_data_Y.close()
     sample_data_M.close()
-    os.remove(os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_mtDNA.samples')))
-    os.remove(os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_YChrom.samples')))
+    os.remove(os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_M.samples')))
+    os.remove(os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_Y.samples')))
     
     #outputting haplotypes of the sampled individuals in textformat
     #first for mtDNA
-    output = open(os.path.join(ROOT_DIR, 'output', 'haplotypes', inputFileName.replace('.trees', '_mtDNA.txt')), "w")
+    output = open(os.path.join(ROOT_DIR, 'output', 'fasta', inputFileName.replace('.trees', '_M.fasta')), "w")
     for h,v in zip(mts_M.haplotypes(), mts_M.samples()):
+        seq = h.replace('0','A').replace('1','C')
+        seq = textwrap.fill(seq, 80)
         pop=sts_M.individual(v).metadata["subpopulation"]
-        output.write(f"Pop{pop}_Ind{v}\t"+h+"\n")
+        output.write(f">Pop{pop}_Ind{v}\n"+seq+"\n")
     output.close()
 
     #here for Y-chromosome
-    output = open(os.path.join(ROOT_DIR, 'output', 'haplotypes', inputFileName.replace('.trees', '_YChrom.txt')), "w")
+    output = open(os.path.join(ROOT_DIR, 'output', 'fasta', inputFileName.replace('.trees', '_Y.fasta')), "w")
     for h,v in zip(mts_Y.haplotypes(), mts_Y.samples()):
+        seq = h.replace('0','A').replace('1','C')
+        seq = textwrap.fill(seq, 80)
         pop=sts_Y.individual(v).metadata["subpopulation"]
-        output.write(f"Pop{pop}_Ind{v}\t"+h+"\n")
+        output.write(f">Pop{pop}_Ind{v}\n"+seq+"\n")
     output.close()
     
+    
+
+
     
 haplotypeCalc(path)
