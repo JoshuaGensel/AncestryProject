@@ -1,4 +1,6 @@
 from logging import FATAL
+from msilib.schema import Error
+from unicodedata import name
 from numpy.lib.function_base import append
 import pyslim
 import json
@@ -13,7 +15,7 @@ import textwrap
 
 #default values for important variables
 
-path = "D:/Daten/programming_projects/AncestryProject/output/ts_raw/Tdiff_100_SB_50_T_200_run_641774310.trees"
+path = "D:/Daten/programming_projects/AncestryProject/output/ts_raw/Td_100_SB_50_T_5_run_1214366183.trees"
 nSamples = 10
 ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),'..','..'))
 
@@ -181,7 +183,15 @@ def haplotypeCalc(path):
         seq = h.replace('0','A').replace('1','C')
         seq = textwrap.fill(seq, 80)
         pop=sts_M.individual(v).metadata["subpopulation"]
-        output.write(f">Pop{pop}_Ind{v}\n"+seq+"\n")
+        name = f">Pop{pop}_Ind{v}\n"
+        if pop == 3:
+            if sts_M.mutation_at(v,10) != -1:
+                name = f">Pop{pop}_Ind{v}_SourceP1\n"
+            elif sts_M.mutation_at(v,5) != -1:
+                name = f">Pop{pop}_Ind{v}_SourceP2\n"
+            else:
+                raise Error("P3 ind without Sourcepopulation!")
+        output.write(name+seq+"\n")
     output.close()
 
     #here for Y-chromosome
@@ -189,8 +199,16 @@ def haplotypeCalc(path):
     for h,v in zip(mts_Y.haplotypes(), mts_Y.samples()):
         seq = h.replace('0','A').replace('1','C')
         seq = textwrap.fill(seq, 80)
-        pop=sts_Y.individual(v).metadata["subpopulation"]
-        output.write(f">Pop{pop}_Ind{v}\n"+seq+"\n")
+        pop = sts_Y.individual(v).metadata["subpopulation"]
+        name = f">Pop{pop}_Ind{v}\n"
+        if pop == 3:
+            if sts_Y.mutation_at(v,916558) != -1:
+                name = f">Pop{pop}_Ind{v}_SourceP1\n"
+            elif sts_Y.mutation_at(v,916563) != -1:
+                name = f">Pop{pop}_Ind{v}_SourceP2\n"
+            else:
+                raise Error("P3 ind without Sourcepopulation!")
+        output.write(name+seq+"\n")
     output.close()
     
     
