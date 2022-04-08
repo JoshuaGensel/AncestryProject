@@ -1,7 +1,8 @@
 #!/usr/bin/env Rscript
 
+# call from base directory of a project
 # usage:
-# Rscript --vanilla src/R/hierBAPS_clustering_command_line.R -f myfasta.fasta -n 20 -m 3
+# Rscript --vanilla --quiet src/R/hierBAPS_clustering.R -f output/fasta/myfastafile.fasta -n 20 -m 3
 
 # Load libraries
 library("optparse")
