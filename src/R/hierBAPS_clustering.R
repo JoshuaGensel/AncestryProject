@@ -6,7 +6,7 @@
 # Load libraries
 library("optparse")
 library("rhierbaps")
-library("tidyverse")
+suppressPackageStartupMessages(library(tidyverse))
 
  
 option_list = list(
@@ -61,7 +61,7 @@ prfx <- str_split(fasta_path, pattern = "_", simplify = T) %>%
   .[1]
 
 # load fasta as SNP matrix
-snp_matrix <- load_fasta(fasta_path)
+snp_matrix <- suppressWarnings(load_fasta(fasta_path))
 
 # clustering with hierBAPS
 # to run until the algorithm converges to a local optimum add 
