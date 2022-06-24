@@ -31,8 +31,8 @@ option_list <- list(
               metavar = "numeric")
 );
  
-opt_parser = OptionParser(option_list = option_list);
-opt = parse_args(opt_parser);
+opt_parser <- OptionParser(option_list = option_list);
+opt <- parse_args(opt_parser);
 
 if (is.null(opt$fasta)) {
   print_help(opt_parser)
@@ -51,15 +51,21 @@ dir.create("output/hierBAPS", recursive = T, showWarnings = F)
 
 # extract output name to be the same as input
 out_name <- str_split(fasta_path, pattern = "/", simplify = T) %>%
-  .[,length(.)] %>%
+  .[, length(.)] %>%
   str_split(., pattern = ".fasta", simplify = T) %>%
   .[1]
 
 # extract prefix from the input
 prfx <- str_split(fasta_path, pattern = "_", simplify = T) %>%
-  .[,length(.)] %>%
+  .[, length(.)] %>%
   str_split(., pattern = ".fasta", simplify = T) %>%
   .[1]
+
+# extract simulated SB from the input
+sim_sb <- str_split(fasta_path, pattern = "SB_", simplify = T)[2] %>%
+  str_split(pattern = "_", simplify = T) %>%
+  .[1] %>%
+  as.numeric()
 
 # load fasta as SNP matrix
 snp_matrix <- suppressWarnings(load_fasta(fasta_path))
@@ -85,8 +91,8 @@ tmp_df <- hb$partition.df %>%
                values_to = "cluster",
                values_transform = ~ paste0("C", .x)) %>%
   unite(cluster_name,  c(level, cluster), sep = "_", remove = F) %>%
-  mutate_at("cluster_name", ~paste0(prfx,"_", .x)) %>%
-  mutate(SourceP = coalesce(SourceP,POP)) %>%
+  mutate_at("cluster_name", ~paste0(prfx, "_", .x)) %>%
+  mutate(SourceP = coalesce(SourceP, POP)) %>%
   mutate(SourceP = replace(SourceP, SourceP == "SourceP1", "Pop1")) %>%
   mutate(SourceP = replace(SourceP, SourceP == "SourceP2", "Pop2"))
 
@@ -110,10 +116,28 @@ for (x in unique(tmp_df$level)) {
 }
 
 
-# save table with individuals their source populations and their 
+# save table with individuals their source populations and their
 # rhierbaps haplogroup clusters
-
 tmp_df %>%
   write_delim(file = paste0("output/hierBAPS/", out_name,
                             "_", "IndHapClust.txt"),
+              delim = "\t", append = FALSE)
+
+# save table with frequencies of true_observed and sim_exp per Pop
+tmp_df %>%
+  select("POP", "SourceP") %>%
+  table() %>%
+  as_tibble() %>%
+  mutate(sim_exp = case_when(
+    POP == "Pop1" & SourceP == "Pop1" ~ sum(n) / 3,
+    POP == "Pop2" & SourceP == "Pop2" ~ sum(n) / 3,
+    POP == "Pop1" & SourceP == "Pop2" ~ 0,
+    POP == "Pop2" & SourceP == "Pop1" ~ 0,
+    POP == "Pop3" & SourceP == "Pop1" & prfx == "M" ~ 0.5 * (sum(n) / 3),
+    POP == "Pop3" & SourceP == "Pop2" & prfx == "M" ~ 0.5 * (sum(n) / 3),
+    POP == "Pop3" & SourceP == "Pop1" & prfx == "Y" ~ (sim_sb / 100) * (sum(n) / 3),
+    POP == "Pop3" & SourceP == "Pop2" & prfx == "Y" ~ ((100 - sim_sb) / 100) * (sum(n) / 3))) %>%
+  rename(true_observed = n) %>%
+    write_delim(file = paste0("output/hierBAPS/", out_name,
+                            "_", "ObsExp.txt"),
               delim = "\t", append = FALSE)
