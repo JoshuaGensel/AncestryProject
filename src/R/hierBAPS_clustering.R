@@ -10,33 +10,33 @@ library("rhierbaps")
 suppressPackageStartupMessages(library(tidyverse))
 
  
-option_list = list(
+option_list <- list(
 
-  make_option(c("-f", "--fasta"), 
-              type = "character", 
-              default = NULL, 
-              help = "fasta file e.g. /data/myfasta.fasta", 
+  make_option(c("-f", "--fasta"),
+              type = "character",
+              default = NULL,
+              help = "fasta file e.g. /data/myfasta.fasta",
               metavar = "character"),
 
-  make_option(c("-m", "--max_depth"), 
-              type = "numeric", 
-              default = 2, 
-              help = "Maximum depth of hierarchical search (default = 2) [same as argument max.depth in hierBAPS]", 
+  make_option(c("-m", "--max_depth"),
+              type = "numeric",
+              default = 2,
+              help = "Maximum depth of hierarchical search (default = 2) [same as argument max.depth in hierBAPS]", # nolint
               metavar = "numeric"),
 
-  make_option(c("-n", "--n_pops"), 
-              type = "numeric", 
-              default = 20, 
-              help = "Maximum number of populations in the data (same as argument n.pops in hierBAPS)", 
+  make_option(c("-n", "--n_pops"),
+              type = "numeric",
+              default = 20,
+              help = "Maximum number of populations in the data (same as argument n.pops in hierBAPS)", # nolint
               metavar = "numeric")
 );
  
-opt_parser = OptionParser(option_list=option_list);
+opt_parser = OptionParser(option_list = option_list);
 opt = parse_args(opt_parser);
 
-if (is.null(opt$fasta)){
+if (is.null(opt$fasta)) {
   print_help(opt_parser)
-  stop("At least one argument must be supplied (input fasta).n", call.=FALSE)
+  stop("At least one argument must be supplied (input fasta).n", call. = FALSE)
 }
 
 
@@ -50,63 +50,62 @@ n_pops <- as.numeric(opt$n_pops)
 dir.create("output/hierBAPS", recursive = T, showWarnings = F)
 
 # extract output name to be the same as input
-out_name <- str_split(fasta_path, pattern = "/", simplify = T) %>% 
-  .[,length(.)] %>% 
-  str_split(., pattern = ".fasta", simplify = T) %>% 
+out_name <- str_split(fasta_path, pattern = "/", simplify = T) %>%
+  .[,length(.)] %>%
+  str_split(., pattern = ".fasta", simplify = T) %>%
   .[1]
 
 # extract prefix from the input
-prfx <- str_split(fasta_path, pattern = "_", simplify = T) %>% 
-  .[,length(.)] %>% 
-  str_split(., pattern = ".fasta", simplify = T) %>% 
+prfx <- str_split(fasta_path, pattern = "_", simplify = T) %>%
+  .[,length(.)] %>%
+  str_split(., pattern = ".fasta", simplify = T) %>%
   .[1]
 
 # load fasta as SNP matrix
 snp_matrix <- suppressWarnings(load_fasta(fasta_path))
 
 # clustering with hierBAPS
-# to run until the algorithm converges to a local optimum add 
-# n.extra.rounds = Inf
-hb <- hierBAPS(snp_matrix, 
-               max.depth = max_depth,  
-               n.pops = n_pops, 
-               quiet = TRUE,
-               #assignment.probs = T,
-               #n.extra.rounds = Inf
+# to run until the algorithm converges to a local optimum
+# add n.extra.rounds = Inf
+hb <- hierBAPS(snp_matrix,
+               max.depth = max_depth,
+               n.pops = n_pops,
+               quiet = TRUE
 )
 
 # make freq tables for each population and each genetic marker
-tmp_df <- hb$partition.df %>% 
-  as_tibble() %>% 
-  rename_with(~gsub("level ", "L", .x, fixed = TRUE)) %>% 
-  separate(col = Isolate, 
-           into = c("POP", "Ind", "SourceP"), 
+tmp_df <- hb$partition.df %>%
+  as_tibble() %>%
+  rename_with(~gsub("level ", "L", .x, fixed = TRUE)) %>%
+  separate(col = Isolate,
+           into = c("POP", "Ind", "SourceP"),
            sep = "_", fill = "right") %>%
-  pivot_longer(cols = starts_with("L"), 
-               names_to = "level", 
+  pivot_longer(cols = starts_with("L"),
+               names_to = "level",
                values_to = "cluster",
-               values_transform = ~ paste0("C", .x)) %>% 
-  unite(cluster_name,  c(level, cluster), sep = "_", remove = F) %>% 
-  mutate_at("cluster_name", ~paste0(prfx,"_", .x)) %>% 
-  mutate(SourceP = coalesce(SourceP,POP)) %>% 
-  mutate(SourceP = replace(SourceP, SourceP == "SourceP1", "Pop1")) %>% 
+               values_transform = ~ paste0("C", .x)) %>%
+  unite(cluster_name,  c(level, cluster), sep = "_", remove = F) %>%
+  mutate_at("cluster_name", ~paste0(prfx,"_", .x)) %>%
+  mutate(SourceP = coalesce(SourceP,POP)) %>%
+  mutate(SourceP = replace(SourceP, SourceP == "SourceP1", "Pop1")) %>%
   mutate(SourceP = replace(SourceP, SourceP == "SourceP2", "Pop2"))
 
 
 # save freq table for each clustering level
 for (x in unique(tmp_df$level)) {
   tmp_df %>%
-    filter(level == x) %>% 
-    count(POP, cluster_name) %>% 
-    pivot_wider(names_from = cluster_name, 
-                values_from = n, 
-                values_fill = 0) %>% 
+    filter(level == x) %>%
+    count(POP, cluster_name) %>%
+    pivot_wider(names_from = cluster_name,
+                values_from = n,
+                values_fill = 0) %>%
     rowwise() %>%
     mutate(Nind = sum(c_across(starts_with(prfx)))) %>%
-    mutate_at(vars(starts_with(prfx)), ~round((. / Nind), 4)) %>% 
-    rename_with(~gsub("Nind", paste0("Nind_", prfx), .x, fixed = TRUE)) %>% 
+    mutate_at(vars(starts_with(prfx)), ~round((. / Nind), 4)) %>%
+    rename_with(~gsub("Nind", paste0("Nind_", prfx), .x, fixed = TRUE)) %>%
     rowwise() %>%
-    write_delim(file = paste0("output/hierBAPS/", out_name, "_", x, "_", "FreqTable.txt"),
+    write_delim(file = paste0("output/hierBAPS/", out_name,
+                              "_", x, "_", "FreqTable.txt"),
                 delim = "\t", append = FALSE)
 }
 
@@ -115,5 +114,6 @@ for (x in unique(tmp_df$level)) {
 # rhierbaps haplogroup clusters
 
 tmp_df %>%
-  write_delim(file = paste0("output/hierBAPS/", out_name, "_", "IndHapClust.txt"),
+  write_delim(file = paste0("output/hierBAPS/", out_name,
+                            "_", "IndHapClust.txt"),
               delim = "\t", append = FALSE)
