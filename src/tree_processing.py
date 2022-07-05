@@ -15,9 +15,9 @@ import textwrap
 
 #default values for important variables
 
-path = "D:/Daten/programming_projects/AncestryProject/output/ts_raw/Td_100_SB_50_T_5_run_1214366183.trees"
+path = "D:/Daten/programming_projects/AncestryProject/data/ts_raw/Td_100_SB_50_T_5_run_1214366183.trees"
 nSamples = 10
-ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),'..','..'))
+ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
 
 #Commandline options
 
@@ -107,78 +107,27 @@ def haplotypeCalc(path):
                                    np.random.choice(nodes_M_p3, nSamples, replace=False)))
     sts_Y = ts_Y_raw.simplify(keep_nodes_M)
 
+    #output tree as newick tree file
+    #for mtDNA tree
+    output = open(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', inputFileName.replace('.trees', '_M.tree')), "w")
+    output.write(sts_M.first().as_newick())
+    output.close()
+    #for Y-chromosome tree
+    output = open(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', inputFileName.replace('.trees', '_Y.tree')), "w")
+    output.write(sts_Y.first().as_newick())
+    output.close()
+    
     #overlaying mutations on the tree sequences with msprime
     mts_M = msprime.mutate(sts_M, rate=6.85*10**-7, random_seed=1, keep=False)
     mts_Y = msprime.mutate(sts_Y, rate=3.01*10**-8, random_seed=1, keep=False)
 
     #deleting mutations in the wrong region (i.e. mutations in the mtDNA of a node that is supposed to be a Y-chromosome)
     mts_M = mts_M.delete_sites([i.id for i in mts_M.sites() if i.position < 900000])  
-    mts_Y = mts_Y.delete_sites([i.id for i in mts_Y.sites() if i.position >= 900000])
+    mts_Y = mts_Y.delete_sites([i.id for i in mts_Y.sites() if i.position >= 900000])  
     
-    #saving the parsed SLiM - tree sequences
-    mts_M.dump(os.path.join(ROOT_DIR, 'output', 'ts_parsed', inputFileName.replace('.trees', '_M.trees')))
-    mts_Y.dump(os.path.join(ROOT_DIR, 'output', 'ts_parsed', inputFileName.replace('.trees', '_Y.trees')))
-    
-    #function to convert the binary metadata of SLiM - tree sequences to json
-    #taken from https://github.com/tskit-dev/tsinfer/discussions/629
-    def convert_to_json_metadata(ts):
-        # make a new ts with json metadata
-        new_tables = ts.dump_tables()
-        # iterate through (nearly) all the tables
-        for table_name, table in new_tables.name_map.items():
-            # provenance table doesn't have metadata
-            if table_name not in ["provenances"]:
-                metadata = []
-                for row in table:
-                    try:
-                        row_metadata = row.metadata or {}
-                        metadata.append(json.dumps(row_metadata).encode())
-                    except TypeError:
-                        raise TypeError(f"Can't convert {row.metadata} to JSON")
-                # packset_metadata doesn't validate, so dump json in here and switch schema after
-                table.packset_metadata(metadata)
-                table.metadata_schema = tskit.MetadataSchema({'codec': 'json'})
-        # May also need to convert top level metadata?
-        return new_tables.tree_sequence()
-
-    #converting the metadatas of the SLiM - tree sequences
-    sample_ts_M = convert_to_json_metadata(mts_M)
-    sample_ts_Y = convert_to_json_metadata(mts_Y)
-    
-    #using tsinfer to generate inferred tree sequences based only on the mutations
-    #first for mtDNA tree sequences
-    with tsinfer.SampleData(
-        path=os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_M.samples')), 
-        sequence_length=sample_ts_M.sequence_length, 
-        num_flush_threads=2
-    ) as sample_data_M:
-        for var in sample_ts_M.variants():
-            sample_data_M.add_site(var.site.position, var.genotypes, var.alleles)
-    its_M = tsinfer.infer(sample_data= sample_data_M)
-    
-    #here for Y-chromosome tree sequences
-    with tsinfer.SampleData(
-        path=os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_Y.samples')), 
-        sequence_length=sample_ts_Y.sequence_length, 
-        num_flush_threads=2
-    ) as sample_data_Y:
-        for var in sample_ts_Y.variants():
-            sample_data_Y.add_site(var.site.position, var.genotypes, var.alleles)
-    its_Y = tsinfer.infer(sample_data= sample_data_Y)
-    
-    #saving teh inferred tree sequences
-    its_M.dump(os.path.join(ROOT_DIR, 'output', 'ts_inferred', inputFileName.replace('.trees', '_M.trees')))
-    its_Y.dump(os.path.join(ROOT_DIR, 'output', 'ts_inferred', inputFileName.replace('.trees', '_Y.trees')))
-    
-    #closing and deleting the temporary .samles files of tsinfer because they are HUGE
-    sample_data_Y.close()
-    sample_data_M.close()
-    os.remove(os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_M.samples')))
-    os.remove(os.path.join(ROOT_DIR, 'output', 'tsinfer_samples', inputFileName.replace('.trees', '_Y.samples')))
-    
-    #outputting haplotypes of the sampled individuals in textformat
+    #output haplotypes of the sampled individuals as FASTA
     #first for mtDNA
-    output = open(os.path.join(ROOT_DIR, 'output', 'fasta', inputFileName.replace('.trees', '_M.fasta')), "w")
+    output = open(os.path.join(ROOT_DIR, 'data', 'fasta', inputFileName.replace('.trees', '_M.fasta')), "w")
     for h,v in zip(mts_M.haplotypes(), mts_M.samples()):
         seq = h.replace('0','A').replace('1','C')
         seq = textwrap.fill(seq, 80)
@@ -195,7 +144,7 @@ def haplotypeCalc(path):
     output.close()
 
     #here for Y-chromosome
-    output = open(os.path.join(ROOT_DIR, 'output', 'fasta', inputFileName.replace('.trees', '_Y.fasta')), "w")
+    output = open(os.path.join(ROOT_DIR, 'data', 'fasta', inputFileName.replace('.trees', '_Y.fasta')), "w")
     for h,v in zip(mts_Y.haplotypes(), mts_Y.samples()):
         seq = h.replace('0','A').replace('1','C')
         seq = textwrap.fill(seq, 80)
