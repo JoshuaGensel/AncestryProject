@@ -109,12 +109,36 @@ def haplotypeCalc(path):
 
     #output tree as newick tree file
     #for mtDNA tree
+    node_labels_M = {}
+    for s in sts_M.samples():
+        pop = sts_M.individual(s).metadata["subpopulation"]
+        name = f"P{pop}_n{s}_SP{pop}"
+        if pop == 3:
+            if sts_M.mutation_at(s,10) != -1:
+                name = f"P{pop}_n{s}_SP1"
+            elif sts_M.mutation_at(s,5) != -1:
+                name = f"P{pop}_n{s}_SP2"
+            else:
+                raise Error("P3 ind without Sourcepopulation!")
+        node_labels_M[s] = name
     output = open(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', inputFileName.replace('.trees', '_M.tree')), "w")
-    output.write(sts_M.first().as_newick())
+    output.write(sts_M.first().as_newick(node_labels=node_labels_M))
     output.close()
     #for Y-chromosome tree
+    node_labels_Y = {}
+    for s in sts_Y.samples():
+        pop = sts_Y.individual(s).metadata["subpopulation"]
+        name = f"P{pop}_n{s}_SP{pop}"
+        if pop == 3:
+            if sts_Y.mutation_at(s,916558) != -1:
+                name = f"P{pop}_n{s}_SP1"
+            elif sts_Y.mutation_at(s,916563) != -1:
+                name = f"P{pop}_n{s}_SP2"
+            else:
+                raise Error("P3 ind without Sourcepopulation!")
+        node_labels_Y[s] = name
     output = open(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', inputFileName.replace('.trees', '_Y.tree')), "w")
-    output.write(sts_Y.first().as_newick())
+    output.write(sts_Y.first().as_newick(node_labels=node_labels_Y))
     output.close()
     
     #overlaying mutations on the tree sequences with msprime
@@ -132,12 +156,12 @@ def haplotypeCalc(path):
         seq = h.replace('0','A').replace('1','C')
         seq = textwrap.fill(seq, 80)
         pop=sts_M.individual(v).metadata["subpopulation"]
-        name = f">Pop{pop}_Ind{v}\n"
+        name = f">P{pop}_n{v}_SP{pop}\n"
         if pop == 3:
             if sts_M.mutation_at(v,10) != -1:
-                name = f">Pop{pop}_Ind{v}_SourceP1\n"
+                name = f">P{pop}_n{v}_SP1\n"
             elif sts_M.mutation_at(v,5) != -1:
-                name = f">Pop{pop}_Ind{v}_SourceP2\n"
+                name = f">P{pop}_n{v}_SP2\n"
             else:
                 raise Error("P3 ind without Sourcepopulation!")
         output.write(name+seq+"\n")
@@ -149,12 +173,12 @@ def haplotypeCalc(path):
         seq = h.replace('0','A').replace('1','C')
         seq = textwrap.fill(seq, 80)
         pop = sts_Y.individual(v).metadata["subpopulation"]
-        name = f">Pop{pop}_Ind{v}\n"
+        name = f">P{pop}_n{v}_SP{pop}\n"
         if pop == 3:
             if sts_Y.mutation_at(v,916558) != -1:
-                name = f">Pop{pop}_Ind{v}_SourceP1\n"
+                name = f">P{pop}_n{v}_SP1\n"
             elif sts_Y.mutation_at(v,916563) != -1:
-                name = f">Pop{pop}_Ind{v}_SourceP2\n"
+                name = f">P{pop}_n{v}_SP2\n"
             else:
                 raise Error("P3 ind without Sourcepopulation!")
         output.write(name+seq+"\n")
