@@ -6,13 +6,13 @@ initialize() {
 	if (!exists("run"))
 		defineConstant("run", getSeed());
 	if (!exists("Td"))
-		defineConstant("Td", 100);
+		defineConstant("Td", 1000);
 	if (!exists("prop_p1m_in_p3"))
 		defineConstant("prop_p1m_in_p3", 50);
 	if (!exists("trees_directory"))
 		defineConstant("trees_directory", "D:/Daten/programming_projects/AncestryProject/data/ts_raw/");
 	if (!exists("txt_directory"))
-		defineConstant("txt_directory", "D:/Daten/programming_projects/AncestryProject/data/drift_p3_output/");
+		defineConstant("txt_directory", "D:/Daten/programming_projects/AncestryProject/data/drift_p3/");
 	if (!exists("Ne"))
 		defineConstant("Ne", 500);
 	if (!exists("Ta"))
@@ -20,7 +20,7 @@ initialize() {
 	if (!exists("txt_OutFileName"))
 		defineConstant("txt_OutFileName", asString("Td_"+Td+"_SB_"+prop_p1m_in_p3+"_run_"+run+".txt"));
 	if (!exists("burnin_file"))
-		defineConstant("burnin_file", "D:/Daten/programming_projects/AncestryProject/data/burnin.trees");
+		defineConstant("burnin_file", "D:/Daten/programming_projects/AncestryProject/data/burn_in/burnin.trees");
 	
 	defineConstant("simID", getSeed());
 	defineConstant("L_Y", 899999);
