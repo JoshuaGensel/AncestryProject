@@ -1,15 +1,9 @@
-from logging import FATAL
 from msilib.schema import Error
-from unicodedata import name
-from numpy.lib.function_base import append
 import pyslim
-import json
 import tskit
 import msprime
-import tsinfer
 import numpy as np
 import getopt, sys
-import re
 import os
 import textwrap
 
