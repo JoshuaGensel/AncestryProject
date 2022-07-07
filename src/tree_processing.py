@@ -9,7 +9,7 @@ import textwrap
 
 #default values for important variables
 
-path = "D:/Daten/programming_projects/AncestryProject/data/ts_raw/Td_100_SB_50_T_5_run_1214366183.trees"
+path = "D:/Daten/programming_projects/AncestryProject/data/ts_raw/Td_50_SB_50_T_5_run_3482603321.trees"
 nSamples = 10
 ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
 
