@@ -1,12 +1,10 @@
 import csv
 from fileinput import filename
 from msilib.schema import Error
-from Bio import Phylo
-import pandas as pd
 import os
 import ete3
 import re
-import glob
+
 
 ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
 
@@ -18,7 +16,6 @@ def tree_analysis(filename):
     ID = int(parameter_vector[3])
     SOURCE = filename[-6]
 
-    test_phylo_tree = Phylo.read(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', filename), "newick")
     test_ete_tree = ete3.Tree(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', filename))
 
     non_informative_nodes = 0
@@ -106,6 +103,3 @@ for file in os.listdir(directory):
          tree_analysis(filename)
      else:
          continue
-
-#print(false_proportion, unknown_proportion)
-#Phylo.draw(test_phylo_tree)

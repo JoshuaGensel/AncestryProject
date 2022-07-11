@@ -9,7 +9,6 @@ import textwrap
 
 #default values for important variables
 
-path = "D:/Daten/programming_projects/AncestryProject/data/ts_raw/Td_50_SB_50_T_5_run_3482603321.trees"
 nSamples = 10
 ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
 
@@ -33,11 +32,11 @@ for current_argument, current_value in arguments:
         nSamples = int(current_value)
 
 
-def haplotypeCalc(path):
+def tree_processing(inputFileName):
 
     #saving the name of the .trees input file
-    head, tail = os.path.split(path)
-    inputFileName = tail
+    path = os.path.join(ROOT_DIR, 'data', 'ts_raw',inputFileName)
+    
     
     #Importing and simplifying tree sequence to nodes that resemble mtDNA of females or Y-chromosome of males
     ts_raw = pyslim.load(path)
@@ -178,8 +177,11 @@ def haplotypeCalc(path):
         output.write(name+seq+"\n")
     output.close()
     
-    
+directory = os.fsencode(os.path.join(ROOT_DIR, 'data', 'ts_raw'))
 
-
-    
-haplotypeCalc(path)
+for file in os.listdir(directory):
+     filename = os.fsdecode(file)
+     if filename.endswith(".trees"):
+         tree_processing(filename)
+     else:
+         continue
