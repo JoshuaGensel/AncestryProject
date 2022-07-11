@@ -76,19 +76,11 @@ def tree_analysis(filename):
                 unknown_SP2 += 1
         else:
             raise Error("Nothing inferred!")
-        
 
-    p1_correct = p1_correct/N_SAMPLES
-    p1_false = p1_false/N_SAMPLES
-    unknown_SP1 = unknown_SP1/N_SAMPLES
-    p2_correct = p2_correct/N_SAMPLES
-    p2_false = p2_false/N_SAMPLES
-    unknown_SP2 = unknown_SP2/N_SAMPLES
-
-    p1_proportion = p1_correct + p1_false
-    p2_proportion = p2_correct + p2_false
-    unknown_proportion = unknown_SP1 + unknown_SP2
-    false_proportion = p1_false + p2_false
+    p1_proportion = (p1_correct + p1_false)/(N_SAMPLES-unknown_SP1-unknown_SP2)
+    p2_proportion = (p2_correct + p2_false)/(N_SAMPLES-unknown_SP1-unknown_SP2)
+    unknown_proportion = (unknown_SP1 + unknown_SP2)/N_SAMPLES
+    false_proportion = (p1_false + p2_false)/N_SAMPLES
 
     with open(os.path.join(ROOT_DIR, 'data', 'tree_analysis_data', 'treedata.csv'),"a") as outputfile:
         values_writer = csv.writer(outputfile, delimiter=',')
