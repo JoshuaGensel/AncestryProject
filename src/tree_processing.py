@@ -112,7 +112,7 @@ def tree_processing(inputFileName,nSamples):
             else:
                 raise Error("P3 ind without Sourcepopulation!")
         node_labels_M[s] = name
-    output = open(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', inputFileName.replace('.trees', f'nS_{nSamples}_M.tree')), "w")
+    output = open(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', inputFileName.replace('.trees', f'_NS_{nSamples}_M.tree')), "w")
     output.write(sts_M.first().as_newick(node_labels=node_labels_M))
     output.close()
     #for Y-chromosome tree
@@ -128,7 +128,7 @@ def tree_processing(inputFileName,nSamples):
             else:
                 raise Error("P3 ind without Sourcepopulation!")
         node_labels_Y[s] = name
-    output = open(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', inputFileName.replace('.trees', f'nS_{nSamples}_Y.tree')), "w")
+    output = open(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', inputFileName.replace('.trees', f'_NS_{nSamples}_Y.tree')), "w")
     output.write(sts_Y.first().as_newick(node_labels=node_labels_Y))
     output.close()
     
@@ -142,7 +142,7 @@ def tree_processing(inputFileName,nSamples):
     
     #output haplotypes of the sampled individuals as FASTA
     #first for mtDNA
-    output = open(os.path.join(ROOT_DIR, 'data', 'fasta', inputFileName.replace('.trees', f'nS_{nSamples}_M.fasta')), "w")
+    output = open(os.path.join(ROOT_DIR, 'data', 'fasta', inputFileName.replace('.trees', f'_NS_{nSamples}_M.fasta')), "w")
     for h,v in zip(mts_M.haplotypes(), mts_M.samples()):
         seq = h.replace('0','A').replace('1','C')
         seq = textwrap.fill(seq, 80)
@@ -159,7 +159,7 @@ def tree_processing(inputFileName,nSamples):
     output.close()
 
     #here for Y-chromosome
-    output = open(os.path.join(ROOT_DIR, 'data', 'fasta', inputFileName.replace('.trees', f'nS_{nSamples}_Y.fasta')), "w")
+    output = open(os.path.join(ROOT_DIR, 'data', 'fasta', inputFileName.replace('.trees', f'_NS_{nSamples}_Y.fasta')), "w")
     for h,v in zip(mts_Y.haplotypes(), mts_Y.samples()):
         seq = h.replace('0','A').replace('1','C')
         seq = textwrap.fill(seq, 80)

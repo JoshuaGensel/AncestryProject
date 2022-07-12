@@ -3,66 +3,64 @@ initialize() {
 	
 	initializeSLiMModelType("nonWF");
 	
-	if (!exists("run"))
-		defineConstant("run", getSeed());
-	if (!exists("Td"))
-		defineConstant("Td", 1000);
-	if (!exists("prop_p1m_in_p3"))
-		defineConstant("prop_p1m_in_p3", 50);
-	if (!exists("trees_directory"))
-		defineConstant("trees_directory", "D:/Daten/programming_projects/AncestryProject/data/ts_raw/");
-	if (!exists("txt_directory"))
-		defineConstant("txt_directory", "D:/Daten/programming_projects/AncestryProject/data/drift_p3/");
-	if (!exists("Ne"))
-		defineConstant("Ne", 1000);
-	if (!exists("Ta"))
-		defineConstant("Ta", c(5,10,20,30,40,50,100,200));
-	if (!exists("txt_OutFileName"))
-		defineConstant("txt_OutFileName", asString("Td_"+Td+"_SB_"+prop_p1m_in_p3+"_run_"+run+".txt"));
-	if (!exists("burnin_file"))
-		defineConstant("burnin_file", "D:/Daten/programming_projects/AncestryProject/data/burn_in/burnin.trees");
-	
-	defineConstant("simID", getSeed());
+	defineConstant("ID", getSeed());
 	defineConstant("L_Y", 899999);
 	defineConstant("L_M", 16569);
 	defineConstant("L", L_M+L_Y);
-	defineConstant("freq_p1m_in_p3", prop_p1m_in_p3/100);
-
+	defineConstant("p1_males_proportion", runif(1));
+	defineConstant("p1_females_proportion", runif(1));
+	
+	if (!exists("run"))
+		defineConstant("run", getSeed());
+	if (!exists("Td"))
+		defineConstant("Td", 100);
+	if (!exists("trees_directory"))
+		defineConstant("trees_directory", "D:/Daten/programming_projects/AncestryProject/data/ts_raw/");
+	if (!exists("txt_directory"))
+		defineConstant("txt_directory", "D:/Daten/programming_projects/AncestryProject/data/drift/");
+	if (!exists("Ne"))
+		defineConstant("Ne", 500);
+	if (!exists("Ta"))
+		defineConstant("Ta", c(5,10,20,30,40,50,100,200));
+	if (!exists("txt_OutFileName"))
+		defineConstant("txt_OutFileName", asString("ID_"+ID+"_TD_"+Td+".txt"));
+	if (!exists("burnin_file"))
+		defineConstant("burnin_file", "D:/Daten/programming_projects/AncestryProject/data/burn_in/burnin.trees");
+	
 	/*
 	Variable names:
 	Ne	-	effective populationsize of all the populations
 	Td	-	Time between the initial split of p1 and p2 and the admixture of the two
 	Ta	-	Time that passed since the admixture event
 	L/L_Y/L_M	-	length of the genomic elements in total/for the Y-chromosome/mtDNA
-	prop_p1m_in_p3	-	probability for a male on p1 to migrate to p3 during the admixture event;
-						this enforces the desired admixture proportion
+	p1_males_proportion	-	proportion of p1 males that go into p3 at admixture, 1 - p1_males_proportion will result in 											the proportion of p2 males in p3; the female proportion works the same way
 	*/
 	
 	initializeTreeSeq();
 	initializeSex("A");
 	initializeMutationRate(0);
 	// mtDNA-Marker
-	initializeMutationType("m1", 1.0, "f", 0.0);		
+	initializeMutationType("m1", 1.0, "f", 0.0);
 	// YChrom-Marker
-	initializeMutationType("m2", 1.0, "f", 0.0);		
+	initializeMutationType("m2", 1.0, "f", 0.0);
 	// p1-females-Marker
-	initializeMutationType("m3", 1.0, "f", 0.0);		
+	initializeMutationType("m3", 1.0, "f", 0.0);
 	// p2-females-Marker
-	initializeMutationType("m4", 1.0, "f", 0.0);		
+	initializeMutationType("m4", 1.0, "f", 0.0);
 	// p1-males-Marker
-	initializeMutationType("m5", 1.0, "f", 0.0);		
+	initializeMutationType("m5", 1.0, "f", 0.0);
 	// p2-males-Marker
-	initializeMutationType("m6", 1.0, "f", 0.0);		
+	initializeMutationType("m6", 1.0, "f", 0.0);
 	
 	
 	// mtDNA with mutation rate m1
 	initializeGenomicElementType("g1", m1, 1.0);
 	// Ychr with mutation rate m2
-	initializeGenomicElementType("g2", m2, 1.0);		
+	initializeGenomicElementType("g2", m2, 1.0);
 	// mtDNA geneomic element
-	initializeGenomicElement(g1, 0, L_M-1);	
+	initializeGenomicElement(g1, 0, L_M-1);
 	// Ychr geneomic element
-	initializeGenomicElement(g2, L_M, L);	
+	initializeGenomicElement(g2, L_M, L);
 	
 	// no need for recombination			
 	initializeRecombinationRate(0);
@@ -96,8 +94,8 @@ early() {
 // Ta - time since admixture (output treeSeq on generations: 10,100,200,300,400,500)
 late(){
 	if (sum(sim.generation == Td + Ta + 100000) == 1)
-		{
-		trees_filename = asString("Td_"+Td+"_SB_"+prop_p1m_in_p3+"_T_"+(sim.generation - Td - 100000)+"_run_"+run+".trees");
+	{
+		trees_filename = asString("ID_"+ID+"_TD_"+Td+"_TA_"+(sim.generation - Td - 100000)+".trees");
 		sim.treeSeqOutput(trees_directory + trees_filename);
 	}
 }
@@ -127,13 +125,13 @@ late(){
 
 s1 100 late(){
 	sim.addSubpop("p3", 0);
-	p3.takeMigrants(p1.sampleIndividuals(asInteger(Ne/8), sex = "F"));
-	p3.takeMigrants(p2.sampleIndividuals(asInteger(Ne/8), sex = "F"));
-	p3.takeMigrants(p1.sampleIndividuals(asInteger((Ne/4)*freq_p1m_in_p3), sex = "M"));
-	p3.takeMigrants(p2.sampleIndividuals(asInteger((Ne/4)*(1-freq_p1m_in_p3)), sex = "M"));
+	p3.takeMigrants(p1.sampleIndividuals(asInteger((Ne/4)*p1_females_proportion), sex = "F"));
+	p3.takeMigrants(p2.sampleIndividuals(asInteger((Ne/4)*(1-p1_females_proportion)), sex = "F"));
+	p3.takeMigrants(p1.sampleIndividuals(asInteger((Ne/4)*p1_males_proportion), sex = "M"));
+	p3.takeMigrants(p2.sampleIndividuals(asInteger((Ne/4)*(1-p1_males_proportion)), sex = "M"));
 	
 	// create headers for the txt file
-	writeFile(txt_directory + txt_OutFileName, paste("Td", "run","gen","p1m_in_p3", "p2m_in_p3", "p1f_in_p3", "p2f_in_p3", sep="	"), append=F);
+	writeFile(txt_directory + txt_OutFileName, paste("ID","Td","gen","p1m_in_p3", "p2m_in_p3", "p1f_in_p3", "p2f_in_p3", sep="	"), append=F);
 }
 
 s2 101 late() {
@@ -143,5 +141,5 @@ s2 101 late() {
 	p1m_in_p3 = sum(p3m.genome2.containsMarkerMutation(m5, L-10)) / (sum(p3m.genome2.containsMarkerMutation(m5, L-10)) + sum(p3m.genome2.containsMarkerMutation(m6, L-5)));
 	
 	// append in file freq over generations
-	writeFile(txt_directory + txt_OutFileName, paste(Td, run, sim.generation, p1m_in_p3, (1-p1m_in_p3), p1f_in_p3, (1-p1f_in_p3), sep="	"), append = T);
+	writeFile(txt_directory + txt_OutFileName, paste(ID, Td, sim.generation, p1m_in_p3, (1-p1m_in_p3), p1f_in_p3, (1-p1f_in_p3), sep="	"), append = T);
 }

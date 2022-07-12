@@ -17,11 +17,20 @@ ggplot(treedata, aes(x = as.factor(TD), y = SB/100-P1_PROP)) +
 
 
 
-ggplot(treedata, aes(x = TA, y = NOTINFORMATIVE)) +
-    geom_point()
-ggplot(treedata, aes(x = TA, y = UNKNOWN)) +
-    geom_point()
-ggplot(treedata, aes(x = TA, y = FALSE_INF)) +
-    geom_point()
-ggplot(treedata, aes(x = TA, y = SB/100-P1_PROP)) +
-    geom_point()
+ggplot(treedata, aes(x = as.factor(TA), y = NOTINFORMATIVE)) +
+    geom_boxplot()
+ggplot(treedata, aes(x = as.factor(TA), y = UNKNOWN)) +
+    geom_boxplot()
+ggplot(treedata, aes(x = as.factor(TA), y = FALSE_INF)) +
+    geom_boxplot()
+ggplot(treedata, aes(x = as.factor(TA), y = SB/100-P1_PROP)) +
+    geom_boxplot()
+
+ggplot(treedata, aes(x = as.factor(N_SAMPLES), y = NOTINFORMATIVE)) +
+    geom_boxplot()
+ggplot(treedata, aes(x = as.factor(N_SAMPLES), y = UNKNOWN)) +
+    geom_boxplot()
+ggplot(treedata, aes(x = as.factor(N_SAMPLES), y = FALSE_INF)) +
+    geom_boxplot()
+ggplot(treedata, aes(x = as.factor(N_SAMPLES), y = SB/100-P1_PROP)) +
+    geom_boxplot()
