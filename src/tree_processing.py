@@ -8,8 +8,6 @@ import os
 import textwrap
 
 #default values for important variables
-
-nSamples = 10
 ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
 
 #Commandline options
@@ -32,7 +30,7 @@ for current_argument, current_value in arguments:
         nSamples = int(current_value)
 
 
-def tree_processing(inputFileName):
+def tree_processing(inputFileName,nSamples):
 
     #saving the name of the .trees input file
     path = os.path.join(ROOT_DIR, 'data', 'ts_raw',inputFileName)
@@ -114,7 +112,7 @@ def tree_processing(inputFileName):
             else:
                 raise Error("P3 ind without Sourcepopulation!")
         node_labels_M[s] = name
-    output = open(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', inputFileName.replace('.trees', '_M.tree')), "w")
+    output = open(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', inputFileName.replace('.trees', f'nS_{nSamples}_M.tree')), "w")
     output.write(sts_M.first().as_newick(node_labels=node_labels_M))
     output.close()
     #for Y-chromosome tree
@@ -130,7 +128,7 @@ def tree_processing(inputFileName):
             else:
                 raise Error("P3 ind without Sourcepopulation!")
         node_labels_Y[s] = name
-    output = open(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', inputFileName.replace('.trees', '_Y.tree')), "w")
+    output = open(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', inputFileName.replace('.trees', f'nS_{nSamples}_Y.tree')), "w")
     output.write(sts_Y.first().as_newick(node_labels=node_labels_Y))
     output.close()
     
@@ -144,7 +142,7 @@ def tree_processing(inputFileName):
     
     #output haplotypes of the sampled individuals as FASTA
     #first for mtDNA
-    output = open(os.path.join(ROOT_DIR, 'data', 'fasta', inputFileName.replace('.trees', '_M.fasta')), "w")
+    output = open(os.path.join(ROOT_DIR, 'data', 'fasta', inputFileName.replace('.trees', f'nS_{nSamples}_M.fasta')), "w")
     for h,v in zip(mts_M.haplotypes(), mts_M.samples()):
         seq = h.replace('0','A').replace('1','C')
         seq = textwrap.fill(seq, 80)
@@ -161,7 +159,7 @@ def tree_processing(inputFileName):
     output.close()
 
     #here for Y-chromosome
-    output = open(os.path.join(ROOT_DIR, 'data', 'fasta', inputFileName.replace('.trees', '_Y.fasta')), "w")
+    output = open(os.path.join(ROOT_DIR, 'data', 'fasta', inputFileName.replace('.trees', f'nS_{nSamples}_Y.fasta')), "w")
     for h,v in zip(mts_Y.haplotypes(), mts_Y.samples()):
         seq = h.replace('0','A').replace('1','C')
         seq = textwrap.fill(seq, 80)
@@ -182,6 +180,7 @@ directory = os.fsencode(os.path.join(ROOT_DIR, 'data', 'ts_raw'))
 for file in os.listdir(directory):
      filename = os.fsdecode(file)
      if filename.endswith(".trees"):
-         tree_processing(filename)
+         tree_processing(filename,10)
+         tree_processing(filename,30)
      else:
          continue
