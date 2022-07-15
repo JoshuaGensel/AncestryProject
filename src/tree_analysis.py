@@ -1,11 +1,8 @@
 import csv
-from fileinput import filename
 from msilib.schema import Error
 import os
 import ete3
 import re
-
-from matplotlib import lines
 
 
 ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))

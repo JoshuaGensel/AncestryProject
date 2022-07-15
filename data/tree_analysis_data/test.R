@@ -1,36 +1,42 @@
 library(tidyverse)
 library(ggplot2)
+setwd("D:/Daten/programming_projects/AncestryProject/data/tree_analysis_data")
 
-treedata <- read_csv("treedata.csv", col_names = FALSE)
-colnames(treedata) <- c("ID","SOURCE", "TD", "TA","SB","N_SAMPLES","NOTINFORMATIVE","P1_PROP","P2_PROP","UNKNOWN","FALSE_INF")
-
-
-ggplot(treedata, aes(x = as.factor(TD), y = NOTINFORMATIVE)) +
-    geom_boxplot()
-ggplot(treedata, aes(x = as.factor(TD), y = UNKNOWN)) +
-    geom_boxplot()
-ggplot(treedata, aes(x = as.factor(TD), y = FALSE_INF)) +
-    geom_boxplot()
-ggplot(treedata, aes(x = as.factor(TD), y = SB/100-P1_PROP)) +
-    geom_boxplot()
+treedata_Y <- read.csv("treedata_Y.csv", header = FALSE)
+treedata_M <- read.csv("treedata_M.csv", header = FALSE)
+treedata <- rbind(treedata_M,treedata_Y)
+colnames(treedata) <- strsplit(read_lines("headers.txt"), split = ",")[[1]]
 
 
+ggplot(treedata, aes(x = as.factor(TD), y = G_NO_INFO)) +
+    geom_boxplot()
+ggplot(treedata, aes(x = as.factor(TD), y = G_FALSE)) +
+    geom_boxplot()
+ggplot(treedata, aes(x = as.factor(TD), y = G_UNKNOWN)) +
+    geom_boxplot()
+ggplot(treedata, aes(x = as.factor(TD), y = TRUE_P1-G_P1)) +
+    geom_boxplot()
+ggplot(treedata, aes(x = as.factor(TD), y = INIT_P1-G_P1)) +
+    geom_boxplot()
 
+ggplot(treedata, aes(x = as.factor(TA), y = G_NO_INFO)) +
+    geom_boxplot()
+ggplot(treedata, aes(x = as.factor(TA), y = G_FALSE)) +
+    geom_boxplot()
+ggplot(treedata, aes(x = as.factor(TA), y = G_UNKNOWN)) +
+    geom_boxplot()
+ggplot(treedata, aes(x = as.factor(TA), y = TRUE_P1-G_P1)) +
+    geom_boxplot()
+ggplot(treedata, aes(x = as.factor(TA), y = INIT_P1-G_P1)) +
+    geom_boxplot()
 
-ggplot(treedata, aes(x = as.factor(TA), y = NOTINFORMATIVE)) +
+ggplot(treedata, aes(x = as.factor(NS), y = G_NO_INFO)) +
     geom_boxplot()
-ggplot(treedata, aes(x = as.factor(TA), y = UNKNOWN)) +
+ggplot(treedata, aes(x = as.factor(NS), y = G_FALSE)) +
     geom_boxplot()
-ggplot(treedata, aes(x = as.factor(TA), y = FALSE_INF)) +
+ggplot(treedata, aes(x = as.factor(NS), y = G_UNKNOWN)) +
     geom_boxplot()
-ggplot(treedata, aes(x = as.factor(TA), y = SB/100-P1_PROP)) +
+ggplot(treedata, aes(x = as.factor(NS), y = TRUE_P1-G_P1)) +
     geom_boxplot()
-
-ggplot(treedata, aes(x = as.factor(N_SAMPLES), y = NOTINFORMATIVE)) +
-    geom_boxplot()
-ggplot(treedata, aes(x = as.factor(N_SAMPLES), y = UNKNOWN)) +
-    geom_boxplot()
-ggplot(treedata, aes(x = as.factor(N_SAMPLES), y = FALSE_INF)) +
-    geom_boxplot()
-ggplot(treedata, aes(x = as.factor(N_SAMPLES), y = SB/100-P1_PROP)) +
+ggplot(treedata, aes(x = as.factor(NS), y = INIT_P1-G_P1)) +
     geom_boxplot()
