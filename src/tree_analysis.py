@@ -1,6 +1,7 @@
 import csv
 from msilib.schema import Error
 import os
+from pickle import TRUE
 import ete3
 import re
 
@@ -17,8 +18,10 @@ def tree_analysis(filename):
     NS = int(parameter_vector[3])
     SOURCE = filename[-6]
 
-    #loading genealogy
+    #loading trees
     genealogy = ete3.Tree(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', filename))
+    tree_upgma = ete3.Tree(os.path.join(ROOT_DIR, 'data', 'tree_upgma', filename), format=1)
+    tree_mp = ete3.Tree(os.path.join(ROOT_DIR, 'data', 'tree_mp', filename), format=1)
 
     #function for calculating noninformative nodes
     def calc_NO_INFO(inputTree):
@@ -31,8 +34,10 @@ def tree_analysis(filename):
                 non_informative_nodes += 1
         return(non_informative_nodes-1)/(len([n for n in inputTree.traverse()])-len([n for n in inputTree.iter_leaves()]))
 
-    #Setting NO_INFO metrics
+    #Setting NO_INFO metrics for all tree types
     G_NO_INFO = calc_NO_INFO(genealogy)
+    DM_NO_INFO = calc_NO_INFO(tree_upgma)
+    MP_NO_INFO = calc_NO_INFO(tree_mp)
 
     #function for infering the sourcepopulation of a nodebased on the tree clustering
     def get_SP(node):
@@ -88,10 +93,29 @@ def tree_analysis(filename):
 
         return([(p1_correct + p1_false)/(NS-unknown_SP1-unknown_SP2),(unknown_SP1 + unknown_SP2)/NS,(p1_false + p2_false)/NS])
 
+    #defining metrics for all tree types
+
     G_metrics = calc_inference_metrics(genealogy)
     G_P1 = G_metrics[0]
     G_UNKNOWN = G_metrics[1]
     G_FALSE = G_metrics[2]
+    
+    DM_metrics = calc_inference_metrics(tree_upgma)
+    DM_P1 = DM_metrics[0]
+    DM_UNKNOWN = DM_metrics[1]
+    DM_FALSE = DM_metrics[2]
+    
+    MP_metrics = calc_inference_metrics(tree_mp)
+    MP_P1 = MP_metrics[0]
+    MP_UNKNOWN = MP_metrics[1]
+    MP_FALSE = MP_metrics[2]
+    
+    #calculating normalized robinson-foulds distance from constructed tree to genealogy
+    
+    DM_DIST = genealogy.compare(tree_upgma)["norm_rf"]
+    MP_DIST = genealogy.compare(tree_mp)["norm_rf"]    
+
+    #reading true frequencies in P3 from drift output
 
     def findDriftfile():
         directory = os.fsencode(os.path.join(ROOT_DIR, 'data', 'drift'))
@@ -114,19 +138,21 @@ def tree_analysis(filename):
         else:
             continue
 
+    #writing data into csv file
+
     if(SOURCE == "M"):
         INIT_P1 = float(initialFrequencies[5])
         TRUE_P1 = float(trueFrequencies[5])
         with open(os.path.join(ROOT_DIR, 'data', 'tree_analysis_data', 'treedata_M.csv'),"a") as outputfile:
             values_writer = csv.writer(outputfile, delimiter=',')
-            values_writer.writerow([ID,TD,TA,NS,INIT_P1,TRUE_P1,G_NO_INFO,G_P1,G_FALSE,G_UNKNOWN])
+            values_writer.writerow([ID,TD,TA,NS,INIT_P1,TRUE_P1,G_NO_INFO,G_P1,G_FALSE,G_UNKNOWN,DM_NO_INFO,DM_P1,DM_FALSE,DM_UNKNOWN,MP_NO_INFO,MP_P1,MP_FALSE,MP_UNKNOWN, DM_DIST, MP_DIST])
             outputfile.close()
     elif(SOURCE == "Y"):
         INIT_P1 = float(initialFrequencies[3])
         TRUE_P1 = float(trueFrequencies[3])
         with open(os.path.join(ROOT_DIR, 'data', 'tree_analysis_data', 'treedata_Y.csv'),"a") as outputfile:
             values_writer = csv.writer(outputfile, delimiter=',')
-            values_writer.writerow([ID,TD,TA,NS,INIT_P1,TRUE_P1,G_NO_INFO,G_P1,G_FALSE,G_UNKNOWN])
+            values_writer.writerow([ID,TD,TA,NS,INIT_P1,TRUE_P1,G_NO_INFO,G_P1,G_FALSE,G_UNKNOWN,DM_NO_INFO,DM_P1,DM_FALSE,DM_UNKNOWN,MP_NO_INFO,MP_P1,MP_FALSE,MP_UNKNOWN, DM_DIST, MP_DIST])
             outputfile.close()
     else:
         raise Error("No genetic source in filename!")
