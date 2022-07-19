@@ -1,34 +1,11 @@
-from msilib.schema import Error
 import pyslim
 import tskit
 import msprime
 import numpy as np
-import getopt, sys
 import os
 import textwrap
 
-#default values for important variables
 ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-
-#Commandline options
-
-full_cmd_arguments = sys.argv
-argument_list = full_cmd_arguments[1:]
-short_options = "hp:n:"
-long_options = ["help", "path=", "nSamples="]
-try:
-    arguments, values = getopt.getopt(argument_list, short_options, long_options)
-except getopt.error as err:
-    print (str(err))
-    sys.exit(2)
-for current_argument, current_value in arguments:
-    if current_argument in ("-h", "--help"):
-        print("-p/--path specifies the path for the .trees-file\n-n/--nSamples defines the sampled number of individuals per subpop")
-    elif current_argument in ("-p", "--path"):
-        path = str(current_value)
-    elif current_argument in ("-n", "--nSamples"):
-        nSamples = int(current_value)
-
 
 def tree_processing(inputFileName,nSamples):
 
@@ -110,7 +87,7 @@ def tree_processing(inputFileName,nSamples):
             elif sts_M.mutation_at(s,5) != -1:
                 name = f"P{pop}_n{s}_SP2"
             else:
-                raise Error("P3 ind without Sourcepopulation!")
+                raise ValueError("P3 ind without Sourcepopulation!")
         node_labels_M[s] = name
     output = open(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', inputFileName.replace('.trees', f'_NS_{nSamples}_M.tree')), "w")
     output.write(sts_M.first().as_newick(node_labels=node_labels_M))
@@ -126,7 +103,7 @@ def tree_processing(inputFileName,nSamples):
             elif sts_Y.mutation_at(s,916563) != -1:
                 name = f"P{pop}_n{s}_SP2"
             else:
-                raise Error("P3 ind without Sourcepopulation!")
+                raise ValueError("P3 ind without Sourcepopulation!")
         node_labels_Y[s] = name
     output = open(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', inputFileName.replace('.trees', f'_NS_{nSamples}_Y.tree')), "w")
     output.write(sts_Y.first().as_newick(node_labels=node_labels_Y))
@@ -154,7 +131,7 @@ def tree_processing(inputFileName,nSamples):
             elif sts_M.mutation_at(v,5) != -1:
                 name = f">P{pop}_n{v}_SP2\n"
             else:
-                raise Error("P3 ind without Sourcepopulation!")
+                raise ValueError("P3 ind without Sourcepopulation!")
         output.write(name+seq+"\n")
     output.close()
 
@@ -171,16 +148,16 @@ def tree_processing(inputFileName,nSamples):
             elif sts_Y.mutation_at(v,916563) != -1:
                 name = f">P{pop}_n{v}_SP2\n"
             else:
-                raise Error("P3 ind without Sourcepopulation!")
+                raise ValueError("P3 ind without Sourcepopulation!")
         output.write(name+seq+"\n")
     output.close()
     
-directory = os.fsencode(os.path.join(ROOT_DIR, 'data', 'ts_raw'))
+# directory = os.fsencode(os.path.join(ROOT_DIR, 'data', 'ts_raw'))
 
-for file in os.listdir(directory):
-     filename = os.fsdecode(file)
-     if filename.endswith(".trees"):
-         tree_processing(filename,10)
-         tree_processing(filename,30)
-     else:
-         continue
+# for file in os.listdir(directory):
+#      filename = os.fsdecode(file)
+#      if filename.endswith(".trees"):
+#          tree_processing(filename,10)
+#          tree_processing(filename,30)
+#      else:
+#          continue

@@ -1,5 +1,4 @@
 import csv
-from msilib.schema import Error
 import os
 from pickle import TRUE
 import ete3
@@ -89,7 +88,7 @@ def tree_analysis(filename):
                 else:
                     unknown_SP2 += 1
             else:
-                raise Error("Nothing inferred!")
+                raise ValueError("Nothing inferred!")
 
         return([(p1_correct + p1_false)/(NS-unknown_SP1-unknown_SP2),(unknown_SP1 + unknown_SP2)/NS,(p1_false + p2_false)/NS])
 
@@ -155,13 +154,13 @@ def tree_analysis(filename):
             values_writer.writerow([ID,TD,TA,NS,INIT_P1,TRUE_P1,G_NO_INFO,G_P1,G_FALSE,G_UNKNOWN,DM_NO_INFO,DM_P1,DM_FALSE,DM_UNKNOWN,MP_NO_INFO,MP_P1,MP_FALSE,MP_UNKNOWN, DM_DIST, MP_DIST])
             outputfile.close()
     else:
-        raise Error("No genetic source in filename!")
+        raise ValueError("No genetic source in filename!")
 
-directory = os.fsencode(os.path.join(ROOT_DIR, 'data', 'tree_genealogy'))
+# directory = os.fsencode(os.path.join(ROOT_DIR, 'data', 'tree_genealogy'))
  
-for file in os.listdir(directory):
-     filename = os.fsdecode(file)
-     if filename.endswith(".tree"): 
-         tree_analysis(filename)
-     else:
-         continue
+# for file in os.listdir(directory):
+#      filename = os.fsdecode(file)
+#      if filename.endswith(".tree"): 
+#          tree_analysis(filename)
+#      else:
+#          continue

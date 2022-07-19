@@ -1,13 +1,9 @@
 import os
 from Bio import AlignIO
 from Bio import Phylo
-# from Bio.Phylo.TreeConstruction import DistanceCalculator
-# from Bio.Phylo.TreeConstruction import DistanceTreeConstructor
 from Bio.Phylo.TreeConstruction import *
 
 ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-
-#filename = "ID_1382167421_TD_1000_TA_5_NS_10_M.fasta"
 
 def tree_construction(filename):
 
@@ -27,11 +23,11 @@ def tree_construction(filename):
     tree_mp = constructor.build_tree(aln)
     Phylo.write(tree_mp, os.path.join(ROOT_DIR, 'data', 'tree_mp', filename).replace('.fasta','.tree'),'newick')
     
-directory = os.fsencode(os.path.join(ROOT_DIR, 'data', 'fasta'))
+# directory = os.fsencode(os.path.join(ROOT_DIR, 'data', 'fasta'))
  
-for file in os.listdir(directory):
-     filename = os.fsdecode(file)
-     if filename.endswith(".fasta"): 
-         tree_construction(filename)
-     else:
-         continue
+# for file in os.listdir(directory):
+#      filename = os.fsdecode(file)
+#      if filename.endswith(".fasta"): 
+#          tree_construction(filename)
+#      else:
+#          continue
