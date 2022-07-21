@@ -14,12 +14,10 @@ def tree_construction(filename):
     tree_upgma = constructor_upgma.build_tree(aln)
     Phylo.write(tree_upgma, os.path.join(ROOT_DIR, 'data', 'tree_upgma', filename).replace('.fasta','.tree'),'newick')
 
-    #constructing maximum-parsimony tree based on neighbor joining tree
-    constructor_nj = DistanceTreeConstructor(DistanceCalculator("identity"), 'nj')
-    tree_nj = constructor_nj.build_tree(aln)
+    #constructing maximum-parsimony tree based on upgma tree
     scorer = ParsimonyScorer()
     searcher = NNITreeSearcher(scorer)
-    constructor = ParsimonyTreeConstructor(searcher, tree_nj)
+    constructor = ParsimonyTreeConstructor(searcher, tree_upgma)
     tree_mp = constructor.build_tree(aln)
     Phylo.write(tree_mp, os.path.join(ROOT_DIR, 'data', 'tree_mp', filename).replace('.fasta','.tree'),'newick')
     

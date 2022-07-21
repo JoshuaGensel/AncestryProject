@@ -1,6 +1,5 @@
 import csv
 import os
-from pickle import TRUE
 import ete3
 import re
 
@@ -89,8 +88,10 @@ def tree_analysis(filename):
                     unknown_SP2 += 1
             else:
                 raise ValueError("Nothing inferred!")
-
-        return([(p1_correct + p1_false)/(NS-unknown_SP1-unknown_SP2),(unknown_SP1 + unknown_SP2)/NS,(p1_false + p2_false)/NS])
+        if NS-unknown_SP1-unknown_SP2 > 0:
+            return([(p1_correct + p1_false)/(NS-unknown_SP1-unknown_SP2),(unknown_SP1 + unknown_SP2)/NS,(p1_false + p2_false)/NS])
+        else:
+            return(["NA",(unknown_SP1 + unknown_SP2)/NS,(p1_false + p2_false)/NS])
 
     #defining metrics for all tree types
 
