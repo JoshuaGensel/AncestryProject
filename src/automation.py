@@ -34,12 +34,11 @@ def main():
     ts_raw = os.fsencode(os.path.join(ROOT_DIR, 'data', 'ts_raw'))
     for file in os.listdir(ts_raw):
         filename = os.fsdecode(file)
-        for start in file_name_starts:
-            if filename.startswith(start):
-                for n in N_sample_values:
-                    tree_processing(filename,n)
-            else:
-                continue
+        if filename.startswith(file_name_starts):
+            for n in N_sample_values:
+                tree_processing(filename,n)
+        else:
+            continue
     processing_time = datetime.now()
     print(f"\t \t tree processing finished after: {processing_time-model_time}")
 
@@ -47,11 +46,10 @@ def main():
     fasta = os.fsencode(os.path.join(ROOT_DIR, 'data', 'fasta'))
     for file in os.listdir(fasta):
         filename = os.fsdecode(file)
-        for start in file_name_starts:
-            if filename.startswith(start): 
-                tree_construction(filename)
-            else:
-                continue
+        if filename.startswith(file_name_starts): 
+            tree_construction(filename)
+        else:
+            continue
     construction_time = datetime.now()
     print(f"\t \t tree construction finished after: {construction_time-processing_time}")
 
@@ -59,11 +57,10 @@ def main():
     parsed_trees = os.fsencode(os.path.join(ROOT_DIR, 'data', 'tree_genealogy'))
     for file in os.listdir(parsed_trees):
         filename = os.fsdecode(file)
-        for start in file_name_starts:
-            if filename.startswith(start): 
-                tree_analysis(filename)
-            else:
-                continue
+        if filename.startswith(file_name_starts): 
+            tree_analysis(filename)
+        else:
+            continue
     analysis_time = datetime.now()
     print(f"\t \t tree analysis finished after: {analysis_time-construction_time}")
         
