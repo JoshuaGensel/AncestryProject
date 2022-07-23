@@ -14,22 +14,19 @@ ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
 def main():
     
     start_time = datetime.now()
-    Td_values = [100,300,1000]
-    N_sample_values = [10, 20]
-    seeds = [randint(10**8,10**9-1), randint(0**8,10**9-1),randint(0**8,10**9-1)]
-    file_name_starts = []
-    for i in seeds:
-        file_name_starts.append(f"ID_{i}")
-
-    slim_drift = f"-d txt_directory='{os.path.join(ROOT_DIR, 'data', 'drift/')}'".replace('\\','/')
+    Td_value = randint(100,1000)
+    N_sample_values = [10,20]
+    slim_seed = randint(10**8,10**9-1)
+    file_name_starts = f"ID_{Td_value}"
+    
     slim_burn_in = f"-d burnin_file='{os.path.join(ROOT_DIR, 'data', 'burn_in', 'burnin.trees')}'".replace('\\','/')
+    slim_drift = f"-d txt_directory='{os.path.join(ROOT_DIR, 'data', 'drift/')}'".replace('\\','/')
     slim_ts_raw = f"-d trees_directory='{os.path.join(ROOT_DIR, 'data', 'ts_raw/')}'".replace('\\','/')
 
-
+    print(f"\t Run ID: {slim_seed}")
     print("\t Running SLiM_model ...")
-    for s,Td in zip(seeds,Td_values):
-        command = f"slim -s {s} -d Td={Td} {slim_drift} {slim_burn_in} {slim_ts_raw} SLiM_model.slim"
-        subprocess.run(command.split(),stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    command = f"slim -s {slim_seed} -d Td={Td_value} {slim_drift} {slim_burn_in} {slim_ts_raw} SLiM_model.slim"
+    subprocess.run(command.split(),stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     model_time = datetime.now()
     print(f"\t \t model runs finished after: {model_time-start_time}")
 

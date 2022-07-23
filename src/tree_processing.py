@@ -12,68 +12,56 @@ def tree_processing(inputFileName,nSamples):
     #saving the name of the .trees input file
     path = os.path.join(ROOT_DIR, 'data', 'ts_raw',inputFileName)
     
-    
     #Importing and simplifying tree sequence to nodes that resemble mtDNA of females or Y-chromosome of males
     ts_raw = pyslim.load(path)
-    all_nodes = ts_raw.samples()
-    nodes_F = []
-    nodes_M = []
-
-    for u in all_nodes:
-        if ts_raw.mutation_at(u,0) != -1 and ts_raw.individual(ts_raw.node(u).individual).metadata["sex"] == pyslim.INDIVIDUAL_TYPE_FEMALE:
-            nodes_F.append(u)
-        if ts_raw.mutation_at(u,916567) != -1 and ts_raw.individual(ts_raw.node(u).individual).metadata["sex"] == pyslim.INDIVIDUAL_TYPE_MALE:
-            nodes_M.append(u)
-        else:
-            pass
-        
     
-    ts_M_raw = ts_raw.simplify(samples=nodes_F)
-    ts_Y_raw = ts_raw.simplify(samples=nodes_M)
-
-    #Checking that there is now only 1 tree with 1 root for mtDNA and Y-chromosome
-    if(ts_M_raw.num_trees != 1): raise ValueError("more than one tree!")
-    if(ts_Y_raw.num_trees != 1): raise ValueError("more than one tree!")
-
-    if(ts_M_raw.first().num_roots > 1): raise ValueError("more than one root!")
-    if(ts_Y_raw.first().num_roots > 1): raise ValueError("more than one root!")
-
-    #randomly sampling n = nSamples number of female individuals per subpopulation
-    #than simplifying down to only consider these samples
-    nodes_F_p1 = []
-    nodes_F_p2 = []
-    nodes_F_p3 = []
-    for i in ts_M_raw.individuals_alive_at(0):
-        if ts_M_raw.individual(i).metadata["subpopulation"] == 1:
-            nodes_F_p1.extend(ts_M_raw.individual(i).nodes)
-        elif ts_M_raw.individual(i).metadata["subpopulation"] == 2:
-            nodes_F_p2.extend(ts_M_raw.individual(i).nodes)
-        elif ts_M_raw.individual(i).metadata["subpopulation"] == 3:
-            nodes_F_p3.extend(ts_M_raw.individual(i).nodes)
-        else:
-            raise ValueError("Individual without population!")
-    keep_nodes_F = np.concatenate((np.random.choice(nodes_F_p1, nSamples, replace=False), 
-                                   np.random.choice(nodes_F_p2, nSamples, replace=False), 
-                                   np.random.choice(nodes_F_p3, nSamples, replace=False)))
-    sts_M = ts_M_raw.simplify(keep_nodes_F)
-
-    #now same sampling procedure for males
+    #picking nodes that resemble mtDNA of female individuals or Y-Chromosome of a male indivduals in the last generation
     nodes_M_p1 = []
     nodes_M_p2 = []
     nodes_M_p3 = []
-    for i in ts_Y_raw.individuals_alive_at(0):
-        if ts_Y_raw.individual(i).metadata["subpopulation"] == 1:
-            nodes_M_p1.extend(ts_Y_raw.individual(i).nodes)
-        elif ts_Y_raw.individual(i).metadata["subpopulation"] == 2:
-            nodes_M_p2.extend(ts_Y_raw.individual(i).nodes)
-        elif ts_Y_raw.individual(i).metadata["subpopulation"] == 3:
-            nodes_M_p3.extend(ts_Y_raw.individual(i).nodes)
+    nodes_Y_p1 = []
+    nodes_Y_p2 = []
+    nodes_Y_p3 = []
+
+    for u in ts_raw.samples(time=0):
+        if ts_raw.mutation_at(u,0) != -1 and ts_raw.individual(ts_raw.node(u).individual).metadata["sex"] == pyslim.INDIVIDUAL_TYPE_FEMALE:
+            if ts_raw.individual(ts_raw.node(u).individual).metadata["subpopulation"] == 1:
+                nodes_M_p1.append(u)
+            elif ts_raw.individual(ts_raw.node(u).individual).metadata["subpopulation"] == 2:
+                nodes_M_p2.append(u)
+            elif ts_raw.individual(ts_raw.node(u).individual).metadata["subpopulation"] == 3:
+                nodes_M_p3.append(u)
+            else:
+                raise ValueError("Female Individual without population!")
+        elif ts_raw.mutation_at(u,916567) != -1 and ts_raw.individual(ts_raw.node(u).individual).metadata["sex"] == pyslim.INDIVIDUAL_TYPE_MALE:
+            if ts_raw.individual(ts_raw.node(u).individual).metadata["subpopulation"] == 1:
+                nodes_Y_p1.append(u)
+            elif ts_raw.individual(ts_raw.node(u).individual).metadata["subpopulation"] == 2:
+                nodes_Y_p2.append(u)
+            elif ts_raw.individual(ts_raw.node(u).individual).metadata["subpopulation"] == 3:
+                nodes_Y_p3.append(u)
+            else:
+                raise ValueError("Male Individual without population!")
         else:
-            raise ValueError("Individual without population!")
+            pass
+
+    #simplifying down to nSamples of these relevant nodes
     keep_nodes_M = np.concatenate((np.random.choice(nodes_M_p1, nSamples, replace=False), 
-                                   np.random.choice(nodes_M_p2, nSamples, replace=False), 
-                                   np.random.choice(nodes_M_p3, nSamples, replace=False)))
-    sts_Y = ts_Y_raw.simplify(keep_nodes_M)
+                                    np.random.choice(nodes_M_p2, nSamples, replace=False), 
+                                    np.random.choice(nodes_M_p3, nSamples, replace=False)))
+    sts_M = ts_raw.simplify(keep_nodes_M)
+
+    keep_nodes_Y = np.concatenate((np.random.choice(nodes_Y_p1, nSamples, replace=False), 
+                                    np.random.choice(nodes_Y_p2, nSamples, replace=False), 
+                                    np.random.choice(nodes_Y_p3, nSamples, replace=False)))
+    sts_Y = ts_raw.simplify(keep_nodes_Y)
+
+    #Checking that there is now only 1 tree with 1 root for mtDNA and Y-chromosome
+    if(sts_M.num_trees != 1): raise ValueError("more than one tree!")
+    if(sts_Y.num_trees != 1): raise ValueError("more than one tree!")
+
+    if(sts_M.first().num_roots > 1): raise ValueError("more than one root!")
+    if(sts_Y.first().num_roots > 1): raise ValueError("more than one root!")
 
     #output tree as newick tree file
     #for mtDNA tree
@@ -108,7 +96,7 @@ def tree_processing(inputFileName,nSamples):
     output = open(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', inputFileName.replace('.trees', f'_NS_{nSamples}_Y.tree')), "w")
     output.write(sts_Y.first().as_newick(node_labels=node_labels_Y))
     output.close()
-    
+
     #overlaying mutations on the tree sequences with msprime
     mts_M = msprime.mutate(sts_M, rate=6.85*10**-7, random_seed=1, keep=False)
     mts_Y = msprime.mutate(sts_Y, rate=3.01*10**-8, random_seed=1, keep=False)
