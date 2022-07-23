@@ -17,7 +17,7 @@ def main():
     Td_value = randint(100,1000)
     N_sample_values = [10,20]
     slim_seed = randint(10**8,10**9-1)
-    file_name_starts = f"ID_{Td_value}"
+    file_name_starts = f"ID_{slim_seed}"
     
     slim_burn_in = f"-d burnin_file='{os.path.join(ROOT_DIR, 'data', 'burn_in', 'burnin.trees')}'".replace('\\','/')
     slim_drift = f"-d txt_directory='{os.path.join(ROOT_DIR, 'data', 'drift/')}'".replace('\\','/')
@@ -28,7 +28,7 @@ def main():
     command = f"slim -s {slim_seed} -d Td={Td_value} {slim_drift} {slim_burn_in} {slim_ts_raw} SLiM_model.slim"
     subprocess.run(command.split(),stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     model_time = datetime.now()
-    print(f"\t \t model runs finished after: {model_time-start_time}")
+    print(f"\t \t model run finished after: {model_time-start_time}")
 
     print("\t Running tree_processing.py ...")
     ts_raw = os.fsencode(os.path.join(ROOT_DIR, 'data', 'ts_raw'))
