@@ -21,7 +21,7 @@ initialize() {
 	if (!exists("Ne"))
 		defineConstant("Ne", 5000);
 	if (!exists("Ta"))
-		defineConstant("Ta", c(rdunif(1,10,100),rdunif(1,100,500),rdunif(1,500,1000)));
+		defineConstant("Ta", c(1,100,200,300,400,500,1000));
 	if (!exists("txt_OutFileName"))
 		defineConstant("txt_OutFileName", asString("ID_"+ID+"_TD_"+Td+".txt"));
 	if (!exists("burnin_file"))

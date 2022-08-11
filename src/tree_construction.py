@@ -9,17 +9,13 @@ def tree_construction(filename):
 
     aln = AlignIO.read(os.path.join(ROOT_DIR, 'data', 'fasta', filename), 'fasta')
 
-    #constructing distance-matrix/UPGMA tree
-    constructor_upgma = DistanceTreeConstructor(DistanceCalculator("identity"), 'upgma')
-    tree_upgma = constructor_upgma.build_tree(aln)
-    Phylo.write(tree_upgma, os.path.join(ROOT_DIR, 'data', 'tree_upgma', filename).replace('.fasta','.tree'),'newick')
+    #constructing distance-matrix/nj tree
+    constructor = DistanceTreeConstructor(DistanceCalculator("identity"), 'nj')
+    tree_nj = constructor.build_tree(aln)
+    tree_nj.root_at_midpoint()
+    Phylo.write(tree_nj, os.path.join(ROOT_DIR, 'data', 'tree_nj', filename).replace('.fasta','.tree'),'newick')
 
-    #constructing maximum-parsimony tree based on upgma tree
-    scorer = ParsimonyScorer()
-    searcher = NNITreeSearcher(scorer)
-    constructor = ParsimonyTreeConstructor(searcher, tree_upgma)
-    tree_mp = constructor.build_tree(aln)
-    Phylo.write(tree_mp, os.path.join(ROOT_DIR, 'data', 'tree_mp', filename).replace('.fasta','.tree'),'newick')
+
     
 # directory = os.fsencode(os.path.join(ROOT_DIR, 'data', 'fasta'))
  

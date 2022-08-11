@@ -18,8 +18,7 @@ def tree_analysis(filename):
 
     #loading trees
     genealogy = ete3.Tree(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', filename))
-    tree_upgma = ete3.Tree(os.path.join(ROOT_DIR, 'data', 'tree_upgma', filename), format=1)
-    tree_mp = ete3.Tree(os.path.join(ROOT_DIR, 'data', 'tree_mp', filename), format=1)
+    tree_nj = ete3.Tree(os.path.join(ROOT_DIR, 'data', 'tree_nj', filename), format=1)
 
     #function for calculating noninformative nodes
     def calc_NO_INFO(inputTree):
@@ -34,8 +33,7 @@ def tree_analysis(filename):
 
     #Setting NO_INFO metrics for all tree types
     G_NO_INFO = calc_NO_INFO(genealogy)
-    DM_NO_INFO = calc_NO_INFO(tree_upgma)
-    MP_NO_INFO = calc_NO_INFO(tree_mp)
+    NJ_NO_INFO = calc_NO_INFO(tree_nj)
 
     #function for infering the sourcepopulation of a nodebased on the tree clustering
     def get_SP(node):
@@ -100,20 +98,11 @@ def tree_analysis(filename):
     G_UNKNOWN = G_metrics[1]
     G_FALSE = G_metrics[2]
     
-    DM_metrics = calc_inference_metrics(tree_upgma)
-    DM_P1 = DM_metrics[0]
-    DM_UNKNOWN = DM_metrics[1]
-    DM_FALSE = DM_metrics[2]
-    
-    MP_metrics = calc_inference_metrics(tree_mp)
-    MP_P1 = MP_metrics[0]
-    MP_UNKNOWN = MP_metrics[1]
-    MP_FALSE = MP_metrics[2]
-    
-    #calculating normalized robinson-foulds distance from constructed tree to genealogy
-    
-    DM_DIST = genealogy.compare(tree_upgma)["norm_rf"]
-    MP_DIST = genealogy.compare(tree_mp)["norm_rf"]    
+    NJ_metrics = calc_inference_metrics(tree_nj)
+    NJ_P1 = NJ_metrics[0]
+    NJ_UNKNOWN = NJ_metrics[1]
+    NJ_FALSE = NJ_metrics[2]
+      
 
     #reading true frequencies in P3 from drift output
 
@@ -145,14 +134,14 @@ def tree_analysis(filename):
         TRUE_P1 = float(trueFrequencies[5])
         with open(os.path.join(ROOT_DIR, 'data', 'tree_analysis_data', 'treedata_M.csv'),"a") as outputfile:
             values_writer = csv.writer(outputfile, delimiter=',')
-            values_writer.writerow([ID,TD,TA,NS,INIT_P1,TRUE_P1,G_NO_INFO,G_P1,G_FALSE,G_UNKNOWN,DM_NO_INFO,DM_P1,DM_FALSE,DM_UNKNOWN,MP_NO_INFO,MP_P1,MP_FALSE,MP_UNKNOWN, DM_DIST, MP_DIST])
+            values_writer.writerow([ID,TD,TA,NS,INIT_P1,TRUE_P1,G_NO_INFO,G_P1,G_FALSE,G_UNKNOWN,NJ_NO_INFO,NJ_P1,NJ_FALSE,NJ_UNKNOWN])
             outputfile.close()
     elif(SOURCE == "Y"):
         INIT_P1 = float(initialFrequencies[3])
         TRUE_P1 = float(trueFrequencies[3])
         with open(os.path.join(ROOT_DIR, 'data', 'tree_analysis_data', 'treedata_Y.csv'),"a") as outputfile:
             values_writer = csv.writer(outputfile, delimiter=',')
-            values_writer.writerow([ID,TD,TA,NS,INIT_P1,TRUE_P1,G_NO_INFO,G_P1,G_FALSE,G_UNKNOWN,DM_NO_INFO,DM_P1,DM_FALSE,DM_UNKNOWN,MP_NO_INFO,MP_P1,MP_FALSE,MP_UNKNOWN, DM_DIST, MP_DIST])
+            values_writer.writerow([ID,TD,TA,NS,INIT_P1,TRUE_P1,G_NO_INFO,G_P1,G_FALSE,G_UNKNOWN,NJ_NO_INFO,NJ_P1,NJ_FALSE,NJ_UNKNOWN])
             outputfile.close()
     else:
         raise ValueError("No genetic source in filename!")
