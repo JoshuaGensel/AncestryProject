@@ -15,17 +15,17 @@ initialize() {
 	if (!exists("Td"))
 		defineConstant("Td", 100);
 	if (!exists("trees_directory"))
-		defineConstant("trees_directory", "D:/Daten/programming_projects/AncestryProject/data/ts_raw/");
+		defineConstant("trees_directory", "../data/ts_raw/");
 	if (!exists("txt_directory"))
-		defineConstant("txt_directory", "D:/Daten/programming_projects/AncestryProject/data/drift/");
+		defineConstant("txt_directory", "../data/drift/");
 	if (!exists("Ne"))
 		defineConstant("Ne", 5000);
 	if (!exists("Ta"))
-		defineConstant("Ta", c(1,100,200,300,400,500,1000));
+		defineConstant("Ta", c(2,100,200,300,400,500,1000));
 	if (!exists("txt_OutFileName"))
 		defineConstant("txt_OutFileName", asString("ID_"+ID+"_TD_"+Td+".txt"));
 	if (!exists("burnin_file"))
-		defineConstant("burnin_file", "D:/Daten/programming_projects/AncestryProject/data/burn_in/burnin.trees");
+		defineConstant("burnin_file", "../data/burn_in/burnin.trees");
 	
 	/*
 	Variable names:
@@ -33,7 +33,7 @@ initialize() {
 	Td	-	Time between the initial split of p1 and p2 and the admixture of the two
 	Ta	-	Time that passed since the admixture event
 	L/L_Y/L_M	-	length of the genomic elements in total/for the Y-chromosome/mtDNA
-	p1_males_proportion	-	proportion of p1 males that go into p3 at admixture, 1 - p1_males_proportion will result in 											the proportion of p2 males in p3; the female proportion works the same way
+	p1_males_proportion/p1_females_proportion	-	proportion of p1 individuals that go into p3 at admixture, 1 - p1_proportion is the proportion of p2 individuals											the proportion of p2 males in p3; the female proportion works the same way
 	*/
 	
 	initializeTreeSeq();

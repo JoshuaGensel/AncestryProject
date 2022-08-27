@@ -3,9 +3,11 @@ import os
 from tree_processing import tree_processing
 from tree_construction import tree_construction
 from tree_analysis import tree_analysis
+from tree_processing_nosampling import tree_processing_nosampling
 from datetime import datetime
 from random import *
 import getopt,sys
+
 
 n_runs = None
 
@@ -14,7 +16,7 @@ ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
 def main():
     
     start_time = datetime.now()
-    Td_values = [100,200,300,400,500,1000]
+    Td_values = [100,300,500,1000,3000]
     N_sample_values = [10,20,50,100]
     slim_seed = randint(10**8,10**9-1)
     file_name_starts = f"ID_{slim_seed}"
@@ -36,6 +38,7 @@ def main():
     for file in os.listdir(ts_raw):
         filename = os.fsdecode(file)
         if filename.startswith(file_name_starts):
+            #tree_processing_nosampling(filename)
             tree_processing(filename,N_sample_values)
         else:
             continue

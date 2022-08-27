@@ -2,8 +2,6 @@
 #Data handling
 library(tidyverse)
 library(ggplot2)
-require(GGally)
-require(rgl)
 require(betareg)
 setwd("D:/Daten/programming_projects/AncestryProject/data/tree_analysis_data")
 
@@ -21,16 +19,16 @@ summary(treedata$G_DIFF)
 ggplot(treedata, aes(x = TD, y = G_NO_INFO, col = TA)) +
     facet_grid(~NS) +
     geom_point()
-ggplot(treedata, aes(x = TD, y = G_UNKNOWN, col = TA)) +
+ggplot(treedata, aes(x = TD, y = G_UNKNOWN/NS, col = TA)) +
     facet_grid(~NS) +
     geom_point()
-ggplot(treedata, aes(x = TA, y = G_FALSE, col = TD)) +
+ggplot(treedata, aes(x = TD, y = G_FALSE/NS, col = TA)) +
     facet_grid(~NS) +
     geom_point()
-ggplot(treedata, aes(x = TA, y = G_DIFF, col = TD)) +
+ggplot(treedata, aes(x = TD, y = G_DIFF, col = TA)) +
     facet_grid(~NS) +
     geom_point()
-ggplot(treedata, aes(x = TA, y = sqrt((INIT_P1-G_P1)^2), col = TD)) +
+ggplot(treedata, aes(x = TD, y = sqrt((INIT_P1-G_P1)^2), col = TA)) +
     facet_grid(~NS) +
     geom_point()
 plot3d(treedata$TD,treedata$TA,treedata$G_DIFF)

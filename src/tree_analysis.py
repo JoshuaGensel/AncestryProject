@@ -13,12 +13,18 @@ def tree_analysis(filename):
     ID = int(parameter_vector[0])
     TD = int(parameter_vector[1])
     TA = int(parameter_vector[2])
-    NS = int(parameter_vector[3])
     SOURCE = filename[-6]
 
     #loading trees
     genealogy = ete3.Tree(os.path.join(ROOT_DIR, 'data', 'tree_genealogy', filename))
     tree_nj = ete3.Tree(os.path.join(ROOT_DIR, 'data', 'tree_nj', filename), format=1)
+    
+    P3_nodes = []
+    for i in genealogy.iter_leaves():
+        if i.name.startswith("P3"):
+            P3_nodes.append(i)
+                
+    NS = len(P3_nodes)
 
     #function for calculating noninformative nodes
     def calc_NO_INFO(inputTree):
@@ -87,9 +93,9 @@ def tree_analysis(filename):
             else:
                 raise ValueError("Nothing inferred!")
         if NS-unknown_SP1-unknown_SP2 > 0:
-            return([(p1_correct + p1_false)/(NS-unknown_SP1-unknown_SP2),(unknown_SP1 + unknown_SP2)/NS,(p1_false + p2_false)/NS])
+            return([(p1_correct + p1_false)/(NS-unknown_SP1-unknown_SP2),unknown_SP1 + unknown_SP2,p1_false + p2_false])
         else:
-            return(["NA",(unknown_SP1 + unknown_SP2)/NS,(p1_false + p2_false)/NS])
+            return(["NA",unknown_SP1 + unknown_SP2,p1_false + p2_false])
 
     #defining metrics for all tree types
 
