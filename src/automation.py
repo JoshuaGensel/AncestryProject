@@ -16,8 +16,8 @@ ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
 def main():
     
     start_time = datetime.now()
-    Td_values = [100,300,500,1000,3000]
-    N_sample_values = [10,20,50,100]
+    Td_values = [300,600,1000,3000,10000]
+    N_sample_values = [10,50,100]
     slim_seed = randint(10**8,10**9-1)
     file_name_starts = f"ID_{slim_seed}"
     
