@@ -5,7 +5,11 @@ date: '`r Sys.Date()`'
 output: pdf_document
 ---
 
-```{r ,message=FALSE, echo=FALSE}
+*Disclaimer:* 
+
+*If you want to run this report as .Rmd file, you will need your data organized the same way it is in the repository. Also you will need the tidyverse, ggplot2, reshape2 and betareg packages for R.*
+
+```{r ,message=FALSE, echo=FALSE, }
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(ggplot2)
@@ -15,22 +19,14 @@ library(betareg)
 
 ## Introduction
 
-Genetic Data is commonly used to reconstruct human history and paint a picture 
-of ancient populations. Usually the genomic sequences are used to construct 
-phylogenetic trees. Due to their uniparental inheritance and lack of 
-recombination the mitochondrial DNA and the Y-chromosome are particullarly well 
-suited for inferring population history based on their phylogenies (here maybe 
-example studies).
+Genetic Data is commonly used to reconstruct human history and paint a picture of ancient populations. Usually the genomic sequences are used to construct phylogenetic trees. Due to their uniparental inheritance and lack of 
+recombination the mitochondrial DNA and the Y-chromosome are particullarly well suited for inferring population history based on their phylogenies (here maybe example studies).
 
-Yet, there is no clear guidance on what the limitations of such approaches are, 
-and how to avoid over-interpretation of such signal. The main aim of this study 
-is to estimate the accuracy of using phylogenetic trees constructed from mtDNA 
-(mitochondrial DNA) and MSY (Male-specific region of the Y-Chromosome) genomic 
-data to infer information about a populations history. Furthermore I will try to
-estimate the source or part of the methodology which introduces the error in the 
-final estimations.
+Yet, there is no clear guidance on what the limitations of such approaches are, and how to avoid over-interpretation of such signal. The main aim of this study is to estimate the accuracy of using phylogenetic trees constructed from mtDNA (mitochondrial DNA) and MSY (Male-specific region of the Y-Chromosome) genomic 
+data to infer information about a populations history. Furthermore I will try to estimate the source or part of the methodology which introduces the error in the final estimations.
 
-To achieve this I ran forward simulations of an admixture event of two source populations with randomized admixture proportions and varying demographic parameters. These simulations output a recorded tree sequence of randomly sampled individuals alive in the final generation and the genetic data of their mtDNA and Y-chromosome. In addition the current proportions of the source populations in the admixed population were output in every generation. The genetic data then was used to construct a phylogenetic tree. Based on this tree the admixture proportions can be inferred. This allowed me to compare the inferred admixture proportions to the simulated ones in the current and initial state of the population. This gave insight into how demographic parameters (like the degree of divergence and the time since admixture) can limit the accuracy of this method. Furthermore I tried to quantitatively estimate how much error each factor (e.g. sampling of individuals, using the trees structure, constructing) contributed to the inferred proportions.
+To achieve this I ran forward simulations of an admixture event of two source populations with randomized admixture proportions and varying demographic parameters. These simulations output a recorded tree sequence of randomly sampled individuals alive in the final generation and the genetic data of their 
+mtDNA and Y-chromosome. In addition the current proportions of the source populations in the admixed population were output in every generation. The genetic data then was used to construct a phylogenetic tree. Based on this tree the admixture proportions can be inferred. This allowed me to compare the inferred admixture proportions to the simulated ones in the current and initial state of the population. This gave insight into how demographic parameters (like the degree of divergence and the time since admixture) can limit the accuracy of this method. Furthermore I tried to quantitatively estimate how much error each factor (e.g. sampling of individuals, using the trees structure, constructing) contributed to the inferred proportions.
 
 ## Program structure
 
@@ -40,7 +36,7 @@ To achieve this I ran forward simulations of an admixture event of two source po
 
 ## Exploratory analysis
 
-```{r}
+```{r, cache=TRUE}
 treedata_M <- read.csv("./data/tree_analysis_data/treedata_M.csv")
 colnames(treedata_M) <- strsplit(read_lines("./data/tree_analysis_data/headers.txt"), split = ",")[[1]]
 treedata_Y <- read.csv("./data/tree_analysis_data/treedata_Y.csv")
@@ -51,7 +47,96 @@ treedata_Y <- treedata_Y %>% mutate(MARKER = "Y")
 treedata <- rbind(treedata_M, treedata_Y)
 ```
 
+First I'll explore the genealogy data. For this all metrics were calculated from the recorded tree sequence of every simulation run. This means the trees reflect the true history of the sampled individuals. First we will take a look at unknown nodes. These are P3 nodes which cluster with any number of both P1 and P2 leafs and therefore cannot be assigned to one of the source populations with certainty.
 
+In the following plot we can see the proportion of unknown nodes in P3 for different values of TD, TA and the number of sampled individuals.
+
+```{r, warning=FALSE}
+ggplot(treedata, aes(x = as.factor(NS), y = G_UNKNOWN/NS)) +
+    facet_grid(TA~TD, labeller = label_both)+
+    xlab("Number of Samples") +
+    ylab("Proportion of unknown nodes") +
+    geom_boxplot()+ 
+    theme_bw()
+```
+We can already see that to avoid unknown nodes you ideally would want high TD and samples, but low TA.
+Also overall the number of unknown nodes is low unless TD is very low and TA very high.
+
+Next we'll look at false nodes. Those are P3 individuals that cluster together with one population in the tree but actually are ancestors of the other one. This would mean that based on their sister clade you would misclassify their origin. In similar fashion as with the unknown nodes the plot shows the proportion of false nodes for the different simulation parameters.
+
+```{r, warning=FALSE}
+ggplot(treedata, aes(x = as.factor(NS), y = G_FALSE/NS)) +
+    facet_grid(TA~TD, labeller = label_both)+
+    xlab("Number of Samples") +
+    ylab("Proportion of false nodes") +
+    geom_boxplot()+ 
+    theme_bw()
+```
+We see the same pattern as with unknown nodes. This already suggest that for a tree to represent the history of individuals accurately you need enough samples, deeply diverged source populations and the admixture should be recent.
+
+Next let's take a look at the difference between the "true"/tracked admixture proportion and the admixture proportion inferred from the genealogy. TRUE_P1 here means the tracked proportion of P1 ancestors in P3 at the final generation of a simulation. G_P1 is the P1 proportion inferred based on the genealogy. The Plot is structured as the previous ones.
+
+```{r, warning=FALSE}
+ggplot(treedata, aes(x = as.factor(NS), y = abs(TRUE_P1-G_P1))) +
+    facet_grid(TA~TD, labeller = label_both)+
+    xlab("Number of Samples") +
+    ylab("|TRUE_P1-G_P1|") +
+    geom_boxplot()+ 
+    theme_bw()
+```
+
+Again there is the same pattern showing that for accurate inference high TD and number of samples as well as low TA is desirable. Different here is that overall the difference between "true"/simulated proportions and inferred proportions is larger then the proportions of unknown and false nodes. This suggests that the error in inference based on trees is not only due to the methodology of relying on the clustering of nodes in a tree. I will investigate this further in later sections of this study.
+
+Lastly we can show the same plot as above, just now for the difference between inferred proportion and the initial proportion set up in the simulation. INIT_P1 here denotes the initial P1 proportion in P3, right at admixture.
+
+```{r, warning=FALSE}
+ggplot(treedata, aes(x = as.factor(NS), y = abs(INIT_P1-G_P1))) +
+    facet_grid(TA~TD, labeller = label_both)+
+    xlab("Number of Samples") +
+    ylab("|INIT_P1-G_P1|") +
+    geom_boxplot()+ 
+    theme_bw()
+```
+We can see that now TA has an even stronger effect because high TA means more time for the proportions to drift away from the initial proportions in the population.
+
+Now I will provide the same plots but for the metrics of the constructed genetic tree. The genetic tree was constructed from the mtDNA and Y-chromosome sequences of the sampled individuals with the neighbor-joining method. Therefore the metrics from the genetic trees are denoted with NJ, e.g. NJ_P1. Also now since we used genetic data we need to distinguish between phylogenetic trees constructed for female individuals from mtDNA data (denoted as M and colored in red) and trees constructed for male individuals from Y-chromosome data (denoted as Y and colored in blue).
+
+```{r, warning=FALSE, cache=TRUE}
+#NJ tree
+#unknown proportion
+ggplot(treedata, aes(x = as.factor(NS), y = NJ_UNKNOWN/NS, col = MARKER)) +
+    facet_grid(TA~TD, labeller = label_both)+
+    xlab("Number of Samples") +
+    ylab("Proportion of unknown nodes") +
+    geom_boxplot() + 
+    theme_bw()
+
+#false proportion
+ggplot(treedata, aes(x = as.factor(NS), y = NJ_FALSE/NS, col = MARKER)) +
+    facet_grid(TA~TD, labeller = label_both)+
+    xlab("Number of Samples") +
+    ylab("Proportion of false nodes") +
+    geom_boxplot()+ 
+    theme_bw()
+
+#difference truth - inferred
+ggplot(treedata, aes(x = as.factor(NS), y = abs(TRUE_P1-NJ_P1), col = MARKER)) +
+    facet_grid(TA~TD, labeller = label_both)+
+    xlab("Number of Samples") +
+    ylab("|TRUE_P1-NJ_P1|") +
+    geom_boxplot()+ 
+    theme_bw()
+
+#difference initial - inferred
+ggplot(treedata, aes(x = as.factor(NS), y = abs(INIT_P1-NJ_P1), col = MARKER)) +
+    facet_grid(TA~TD, labeller = label_both)+
+    xlab("Number of Samples") +
+    ylab("|INIT_P1-NJ_P1|") +
+    geom_boxplot()+ 
+    theme_bw()
+```
+
+In summary the data of the phylogenetic trees does not look very different from the genealogy data. This indicates that the methodology of constructing phylogenetic trees from genetic data of uniparental markers is fairly robust and delivers similar results to the "true" trees (genealogies). I am surprised to not see a noticeable difference between using mtDNA and Y-chromosome data, which seemed logical to me due to the difference in genome size and mutation rate.
 
 ## Estimating accuracy of Inference
 
