@@ -19,6 +19,7 @@ def main():
     Td_values = [300,600,1000,3000,10000]
     N_sample_values = [10,50,100]
     slim_seed = randint(10**8,10**9-1)
+    seed(slim_seed)
     file_name_starts = f"ID_{slim_seed}"
     
     slim_burn_in = f"-d burnin_file='{os.path.join(ROOT_DIR, 'data', 'burn_in', 'burnin.trees')}'".replace('\\','/')

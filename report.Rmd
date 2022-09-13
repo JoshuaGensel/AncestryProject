@@ -1,13 +1,15 @@
 ---
 title: "AncestryProject"
 author: "Leon Joshua Gensel"
-date: '`r Sys.Date()`'
-output: pdf_document
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
 ---
 
 *Disclaimer:* 
 
-*If you want to run this report as .Rmd file, you will need your data organized the same way it is in the repository. Also you will need the tidyverse, ggplot2, reshape2 and betareg packages for R.*
+*If you want to run this report as .Rmd file, you will need your data organized the same way it is in the repository. Also you will need the tidyverse, ggplot2, reshape2, imager and betareg packages for R.*
 
 ```{r ,message=FALSE, echo=FALSE, }
 knitr::opts_chunk$set(echo = FALSE)
@@ -15,6 +17,7 @@ library(tidyverse)
 library(ggplot2)
 library(reshape2)
 library(betareg)
+library(imager)
 ```
 
 ## Introduction
@@ -30,9 +33,54 @@ mtDNA and Y-chromosome. In addition the current proportions of the source popula
 
 ## Program structure
 
+In the following section I will provide an overview on how the project is structured and what the individual scripts do. Instructions on how to run the entire program can be found in the README.md on the projects github page [here](https://github.com/JoshuaGensel/AncestryProject).
+
 ### SLiM Simulations
 
+To simulate genetic sequences and tree sequences I used the forward genetic simulator [SLiM](https://messerlab.org/slim/). The basic demographic setup of all simulations is depicted below:
+
+```{r, fig.height=8, fig.width=8}
+simulation_setup <- load.image("./figures/simulation_setup.png")
+plot(simulation_setup, axes = FALSE)
+```
+
+An ancestral population splits into two populations: P1 and P2. Than I simulated a varying amount of time where P1 and P2 exist without any migrations between the two. This time is called TD (for time of divergence between P1 and P2) and I simulated the values 300, 600, 1000, 3000 and 10000 generations for it. After the time defined by TD passed a randomized sample of both females and males from both P1 and P2 admix. That means the individuals are moved together (away from their original population) to found a new, third population P3. How many individuals travel from each population and sex is randomized. This value I defined as proportion, as it is the admixture proportion of a population for one of the sexes. We will only consider the proportion of P1 to P3, since the P2 proportion will always be 1 - proportion(P1). Then again a varying amount of time is simulated of both the source populations (P1 and P2) and the admixed population (P3) existing separately without migrations. This time I defined as TA (for time after admixture) with the values 2, 100, 200, 300, 400, 500 and 1000 generations. After this the simulation ends with a final generation resembling the presence. The simulations output two things: a recorded tree sequence of the ancestry of individuals (genealogy) and a frequency table for P1 and P2 descendants for both sexes in P3 for all generations after admixture. 
+
+#### SLiM details
+
+*Disclaimer: This section can be skipped for readers who are not interested in the details of the SLiM simulation script*
+
+To ensure correct mating after admixture I had to use a nonWF model. I enforced non overlapping generations, an effective population size and random mating, so the model still behaves like a Wright-Fisher model. The simulation of both mtDNA and Y-chromosome simultaneously is done by initializing both as separate genomic elements. Then recombination is set to 0. I stored the mtDNA in the first genome of every individual and the Y-chromosome in the second genome. Then correct inheritance is ensured by using the addRecombinant function in the reproduction callback. To later access the correct nodes in downstream analysis (meaning mtDNA nodes for female individuals only and Y-chromosome nodes for male individuals), I used marker mutations. I also used marker mutations for the frequency output of P1 and P2 descendants of both sexes respectively. To ensure that all trees have a single root I read in a burn-in file, that simulated the ancestral population for 100000 generations.
+
 ### Processing Pipeline
+
+The following flowchart describes the entire pipeline of the project. Scripts are shown in red, data structures/files in blue and parameters in grey:
+
+```{r, fig.height=6, fig.width=8}
+processing_pipeline <- load.image("./figures/processing_pipeline.png")
+plot(processing_pipeline, axes = FALSE)
+```
+
+The entire pipeline is automated via a python script called 'automation.py' which can be called from the command line with the option '-n' to specify how many runs should be performed. A 9-digit ID will be randomly generated and used as a seed for that simulation run. For one run the 'SLiM_model.slim' simulation script will be run for every TD value with a randomized proportion. Then each run generates output at all TA values. The raw tree sequences output by the simulations are input for the 'tree_processing.py' script. The script iterates over all nodes in the tree sequence to subset only nodes that resemble mtDNA of female individuals or Y-chromosomes of male individuals and stores them by population. In the scripts from here on mtDNA data is always denoted with an 'M' and Y-chromosome data with a 'Y', which are also referred to as marker (as in uniparental marker/source of genetic data). Then random subsamples of last generation individuals of each of the populations are taken of size NS. NS is an input parameter describing the number of samples and is kept as 10, 50 and 100 in my simulations, so for each tree sequence we have 3 different sub samplings of varying sizes. Then the tree sequences are simplified down to only reflect the ancestry of the sampled individuals. Via coalescent simulator msprime mutations are overlayed onto the tree sequences. Outputs of this script are the genealogies after sampling in newick-tree format and FASTA files of the genetic sequences for M and Y respectively for all sampled individuals. The 'tree_construction.py' script takes these FASTA files and constructs phylogenetic trees from it using the neighbor-joining method as output. The 'tree_analysis.py' scripts purpose is to take in the different data structures and extract features into a single data table. The input are the P3 frequency tables, and the newick trees for both genealogies and phylogenies. Variables inferred from genealogies are denoted with 'G' and variables from the genetic trees with 'NJ' (for neighbor-joining). The following variables are extracted and put into the tree data talbe:
+
+* ID:       ID of the SLiM simulation run, also used as seed
+* TD:       TD as described in the section 'SLiM Simulations'
+* TA:       TA as described in the section 'SLiM Simulations'
+* NS:       number of sampled individuals via 'tree_processing.py'
+* INIT_P1:      initial proportion in P3 at admixture (extracted from the frequency table)
+* TRUE_P1:      proportion at the final generation where output was generated (extracted from the frequency table)
+* G_NO_INFO:        number of ancestral nodes, except the root, in the genealogy, which have leafs in all three populations and therefore would provide no information on admixture (this metric was not used in further downstream analysis)
+* G_P1:     proportion inferred based on the genealogy
+* G_FALSE:      number of nodes in the genealogy where inference attributed the node to the wrong population (e.g. inferred source population being P1 even though the marker mutation shows that the node is descendent of P2)
+* G_UNKNOWN:        number of nodes in the genealogy where no clear inference can be made (nodes that cluster with both source populations)
+* NJ_NO_INFO:       number of ancestral nodes, except the root, in the genetic tree, which have leafs in all three populations and therefore would provide no information on admixture (this metric was not used in further downstream analysis)
+* NJ_P1:        proportion inferred based on the genetic tree
+* NJ_FALSE:      number of nodes in the genetic tree where inference attributed the node to the wrong population (e.g. inferred source population being P1 even though the marker mutation shows that the node is descendent of P2)
+* NJ_UNKNOWN:        number of nodes in the genetic tree where no clear inference can be made (nodes that cluster with both source populations)
+
+This raises the question how one infers source populations based on tree structure. The structure of trees can be seen as information on clustering of the nodes. This is also used in neighbor-joining for example where the tree is constructed based on a distance matrix of the leaf nodes. Nodes that have less edges between each other cluster closer together. Based on this closely related nodes will cluster together in the tree. Therefore to infer the source population I check if a P3 node clusters with P1 or P2. For this I look at the sister clade of the P3 node and check for P1 and P2 nodes. In the case that in the sister clade are only other P3 nodes the algorithm goes up one ancestral node and checks again. This process is repeated till either at least 1 P1 or P2 node is in the sister clade of that node, and the source population gets inferred accordingly. In the case that at the first level, where not only P3 nodes are in the sister clade, the sister clade contains both P1 AND P2 nodes, I decided to declare the inference of a source population as unclear and did not consider them for the proportion inference. The number of nodes where that happened are denoted as G_UNKNOWN and NJ_UNKNOWN in the data. The number of P3 nodes that cluster with one population but the marker mutations from the simulation reveal that they are descendants of the other population is named G_FALSE and NJ_FALSE. This way the 'tree_analysis.py' achieves to extract proportions from the trees and provides metrics for the number of false and impossible inferences.
+
+Lastly the analysis of all the collected data happens in the treedata_analysis.R file and this R Markdown report. The analysis in both is the same, so reviewing the R Code in this report should be sufficient for anyone interested.
 
 ## Exploratory analysis
 
@@ -59,6 +107,7 @@ ggplot(treedata, aes(x = as.factor(NS), y = G_UNKNOWN/NS)) +
     geom_boxplot()+ 
     theme_bw()
 ```
+
 We can already see that to avoid unknown nodes you ideally would want high TD and samples, but low TA.
 Also overall the number of unknown nodes is low unless TD is very low and TA very high.
 
@@ -72,6 +121,7 @@ ggplot(treedata, aes(x = as.factor(NS), y = G_FALSE/NS)) +
     geom_boxplot()+ 
     theme_bw()
 ```
+
 We see the same pattern as with unknown nodes. This already suggest that for a tree to represent the history of individuals accurately you need enough samples, deeply diverged source populations and the admixture should be recent.
 
 Next let's take a look at the difference between the "true"/tracked admixture proportion and the admixture proportion inferred from the genealogy. TRUE_P1 here means the tracked proportion of P1 ancestors in P3 at the final generation of a simulation. G_P1 is the P1 proportion inferred based on the genealogy. The Plot is structured as the previous ones.
@@ -97,6 +147,7 @@ ggplot(treedata, aes(x = as.factor(NS), y = abs(INIT_P1-G_P1))) +
     geom_boxplot()+ 
     theme_bw()
 ```
+
 We can see that now TA has an even stronger effect because high TA means more time for the proportions to drift away from the initial proportions in the population.
 
 Now I will provide the same plots but for the metrics of the constructed genetic tree. The genetic tree was constructed from the mtDNA and Y-chromosome sequences of the sampled individuals with the neighbor-joining method. Therefore the metrics from the genetic trees are denoted with NJ, e.g. NJ_P1. Also now since we used genetic data we need to distinguish between phylogenetic trees constructed for female individuals from mtDNA data (denoted as M and colored in red) and trees constructed for male individuals from Y-chromosome data (denoted as Y and colored in blue).
@@ -140,18 +191,296 @@ In summary the data of the phylogenetic trees does not look very different from 
 
 ## Estimating accuracy of Inference
 
+In the following section I will quantify how accurate the inference of admixture proportions based on phylogenetic trees is compared to true proportions in the admixed population. The true proportions in P3 where tracked in the simulation, so I can compare the inferred proportions to the simulated initial admixture proportion as well as the current proportion of descendants in the final generation of a run.
+
 ### Estimating accuracy against the current population state
+
+Now we will take a look at the comparison between inferred proportion and true proportion in the current/final generation. I will provide tables which show the percentage of inferred proportions being within +/- 5% of the true proportions and root mean square error (RMSE) values for all the different simulation parameters. The headers of the tables are in the format (number of samples)_(TD) or (marker)_(number of samples)_(TD). First the tables for the genealogies:
+
+```{r, cache=TRUE}
+accuracy_df_G <- data.frame()
+for (td in c(300,600,1000,3000,10000)) {
+    for (ta in c(2,100,200,300,400,500,1000)) {
+        for (ns in c(10,50,100)) {
+            subdf <- filter(treedata, TD == td & TA == ta & NS == ns)
+            prop5 = nrow(filter(subdf, abs(TRUE_P1-G_P1)<0.05))/nrow(subdf)
+            rmse = sqrt(mean((subdf$TRUE_P1-subdf$NJ_P1)^2, na.rm = TRUE))
+            accuracy_df_G <- rbind(accuracy_df_G, c(td,ta,ns, prop5, rmse))
+        }
+    }
+}
+colnames(accuracy_df_G) <- c("TD", "TA", "NS", "PROP5", "RMSE")
+
+G_table_acc <- round(dcast(accuracy_df_G, TA ~ NS + TD, value.var = "PROP5") * 100, 2) %>% mutate(TA = TA/100)
+G_table_rmse <- round(dcast(accuracy_df_G, TA ~ NS + TD, value.var = "RMSE"), 2)
+print("Percentage of runs within +/- 5%:")
+G_table_acc
+print("RMSE:")
+G_table_rmse
+```
+
+We can see that low sample runs (number of samples = 10) are in no surprise very unreliable in inferring correct proportions. A high TD seems to be necessary for accurate inference, but the fact that the difference between TD=3000 and TD=10000 is very small suggests that there might be a threshold for TD where the source populations are diverged enough to not influence the inference any further if more time passes. Important to notice is also that TA seems to have a negative effect on the accuracy of inference even though now we are comparing to the current population state. I would interpret this as further diverging of p3 from the other populations, which makes it harder to associate the descendants with there true source populations.
+
+Here I provide the same tables but for the neighbor-joining trees:
+
+```{r, cache=TRUE}
+accuracy_df_NJ <- data.frame()
+for (td in c(300,600,1000,3000,10000)) {
+    for (ta in c(2,100,200,300,400,500,1000)) {
+        for (ns in c(10,50,100)) {
+            for (marker in c("Y","M")) {
+                subdf <- filter(treedata, TD == td & TA == ta & NS == ns & MARKER == marker)
+                prop5 = nrow(filter(subdf, abs(TRUE_P1-NJ_P1)<0.05))/nrow(subdf)
+                rmse = sqrt(mean((subdf$TRUE_P1-subdf$NJ_P1)^2, na.rm = TRUE))
+                accuracy_df_NJ <- rbind(accuracy_df_NJ, c(td,ta,ns, marker, prop5, rmse))
+            }
+        }
+    }
+}
+colnames(accuracy_df_NJ) <- c("TD", "TA", "NS", "MARKER", "PROP5", "RMSE")
+accuracy_df_NJ[,-4] <- as.numeric(unlist(accuracy_df_NJ[,-4]))
+
+NJ_table_acc <- round(dcast(accuracy_df_NJ, TA ~ MARKER + NS + TD, value.var = "PROP5") * 100, 2) %>% mutate(TA = TA/100)
+NJ_table_rmse <- round(dcast(accuracy_df_NJ, TA ~ MARKER + NS + TD, value.var = "RMSE"), 2)
+print("Percentage of runs within +/- 5%:")
+NJ_table_acc
+print("RMSE:")
+NJ_table_rmse
+```
+
+The results here look very similar to the genealogy data, suggesting that the usage of genetic data to construct phylogenetic trees does not introduce any error. Interestingly for some parameters the genetic trees allowed more accurate inferences than the genealogies, even though I suspect this only being by chance, where a genealogy tracked an error which the construction based on genetic data "missed". 
 
 ### Estimating accuracy against the initial population state
 
+Next we will see how inaccurate estimations from real life data would be. This means looking at how the inference based on genetic trees compares to the initial admixture proportions. For this I will provide the same tables as above just now only for the neighbor-joining trees and RMSE and the percentages are compared to the initial proportions:
+
+```{r, cache=TRUE}
+accuracy_df <- data.frame()
+for (td in c(300,600,1000,3000,10000)) {
+    for (ta in c(2,100,200,300,400,500,1000)) {
+        for (ns in c(10,50,100)) {
+            for (marker in c("Y","M")) {
+                subdf <- filter(treedata, TD == td & TA == ta & NS == ns & MARKER == marker)
+                prop5 = nrow(filter(subdf, abs(INIT_P1-NJ_P1)<0.05))/nrow(subdf)
+                rmse = sqrt(mean((subdf$INIT_P1-subdf$NJ_P1)^2, na.rm = TRUE))
+                accuracy_df <- rbind(accuracy_df, c(td,ta,ns, marker, prop5, rmse))
+            }
+        }
+    }
+}
+colnames(accuracy_df) <- c("TD", "TA", "NS", "MARKER", "PROP5", "RMSE")
+accuracy_df[,-4] <- as.numeric(unlist(accuracy_df[,-4]))
+
+acc_table <- round(dcast(accuracy_df, TA ~ MARKER + NS + TD, value.var = "PROP5") * 100, 2) %>% mutate(TA = TA/100)
+rmse_table <- round(dcast(accuracy_df, TA ~ MARKER + NS + TD, value.var = "RMSE"), 2)
+print("Percentage of runs within +/- 5%:")
+acc_table
+print("RMSE:")
+rmse_table
+```
+
+The data shows that now the effect of TA is even stronger. This makes sense because now higher TA also means more time for the proportions to drift in P3. It also means that if you would want to estimate an initial admixture proportion, the admixture event has to be very recent.
+
 ## Estimating errors
+
+As I showed the inference of admixture proportion based on phylogenetic trees is not always accurate. In the next sections I will try to estimate where this error in inference is coming from. To achieve this I try to quantify the errors contributed by the different steps of the methodology and how they relate to demographic parameters.
 
 ### Error of the inference method
 
+First we will investigate if the clustering of individuals in phylogenetic trees is a reliable way to infer their respective source population. This comes down to quantifying how often we see P3 individuals/nodes that either a) have P1 and P2 nodes in their sister clade at all levels and therefore cannot be assigned to any of the two with certainty (unknown nodes) or b) cluster unambiguously with one of the source populations but are actually descendants of the other (false nodes). For this I will only look at genealogy data, since they should represent the true ancestry best and in the next section we will see how genetic trees differ. 
+
+For case b) of false nodes it is obvious how this will negatively impact inference, but in case a) with unknown nodes it is not clear, since the proportion of the remaining known nodes could still reflect the true proportion well. To see if unknown nodes contribute to worse inference I compared the overall RMSE compared to the current population state of all runs without any unknown nodes to all runs where at least one node was unknown.
+
+```{r}
+unknown_runs <- filter(treedata, G_UNKNOWN > 0)
+no_unknown_runs <- filter(treedata, G_UNKNOWN == 0)
+rmse_unknown = sqrt(mean((unknown_runs$TRUE_P1-unknown_runs$G_P1)^2, na.rm = TRUE))
+rmse_no_unknown = sqrt(mean((no_unknown_runs$TRUE_P1-no_unknown_runs$G_P1)^2, na.rm = TRUE))
+"RMSE of runs with unknown nodes"
+rmse_unknown
+"RMSE of runs without unknown nodes"
+rmse_no_unknown
+```
+
+This shows that unknown nodes are not desirable for accurate inferences.
+
+To estimate how well the tree clustering represents the true ancestry of nodes, I computed the proportion of unknown and false nodes for every run and transformed them to fit in the standard unit interval (0,1).
+
+```{r, echo=TRUE}
+y = (treedata$G_UNKNOWN + treedata$G_FALSE)/treedata$NS
+n = nrow(treedata)
+treedata <- mutate(treedata, G_PROP_MISS = (y*(n-1)+0.5)/n)
+```
+
+Now to estimate the expected proportion of nodes that you will not be able to identify correctly (G_PROP_MISS), I fitted beta regression models for the different demographic parameters (i.e. TD, TA, NS). I used beta regression, because of the non normality of the data. I selected my model based on AIC and used the logit link function and disregarded interactions for the sake of interpretability. 
+
+```{r, cache=TRUE, results='hide'}
+fit1 <- betareg(G_PROP_MISS ~ 1, data = treedata, link = "logit")
+fit2 <- betareg(G_PROP_MISS ~ TA, data = treedata, link = "logit")
+fit3 <- betareg(G_PROP_MISS ~ TD, data = treedata, link = "logit")
+fit4 <- betareg(G_PROP_MISS ~ NS, data = treedata, link = "logit")
+fit5 <- betareg(G_PROP_MISS ~ TA + TD, data = treedata, link = "logit")
+fit6 <- betareg(G_PROP_MISS ~ TA + NS, data = treedata, link = "logit")
+fit7 <- betareg(G_PROP_MISS ~ TD + TA + NS, data = treedata, link = "logit")
+
+G_AIC_table <- data.frame(fit = 1:7, AIC = c(AIC(fit1),AIC(fit2),AIC(fit3),AIC(fit4),AIC(fit5),AIC(fit6),AIC(fit7)))
+G_AIC_table[which.min(G_AIC_table$AIC),]
+```
+The best model included all predictors (G_PROP_MISS ~ TD + TA + NS). Here I will provide the summary and diagnostic plots for the model:
+
+```{r, cache=TRUE}
+summary(fit7)
+par(mfrow=c(2,2))
+plot(fit7)
+```
+
+As we can see the pseudo R-squared value is fairly low with 0.26, there are some high leverage data points (but now strong outliers according to Cooks distance) and a heteroscedastic pattern in the residuals. This means it is hard to infer clear mechanistic relations between the predictors and response, and the model might not be very accurate. I would still argue it can give us insights in the effects of the demographic parameters on the number of nodes we would expect to not be able to infer correctly. Therefore I will now provide a plot of the data with a fitted prediction line:
+
+```{r}
+predict_df <- expand.grid(TD = seq(0,10000,10),
+                          TA = seq(0,1000,10),
+                          NS = unique(treedata$NS))
+predict_df$G_PROP_MISS = predict(fit7, predict_df, type = "response")
+ggplot(treedata, aes(x = TA, y = G_PROP_MISS, col = TD)) +
+    facet_grid(~NS, labeller = label_both) +
+    geom_line(data = subset(predict_df, TD == min(predict_df$TD))) +
+    geom_line(data = subset(predict_df, TD == quantile(predict_df$TD,0.25))) +
+    geom_line(data = subset(predict_df, TD == median(predict_df$TD))) +
+    geom_line(data = subset(predict_df, TD == quantile(predict_df$TD,.75))) +
+    geom_line(data = subset(predict_df, TD == max(predict_df$TD))) +
+    geom_count() + 
+    theme_bw()
+```
+
+We can see negative effects for TD and NS and a positive effect for TA. This aligns with the effects we saw so far for the accuracy of inference. The effect of TD is clearly the strongest. This means that even for "true" genealogies to accurately reflect the origin of individuals in an admixed population, a high degree of divergence between the source populations is mandatory. I would suspect that if TD is low most lineages go back to previous shared populations and therefore the tree does not provide information on the origin of P3 individuals being in either P1 or P2.
+
+In addition to the analysis done so far I simulated 200 runs without sampling individuals. This would ensure that parts of the genealogy which might contain the information necessary for accurate inference of source populations are not missing due to sampling. To achieve a reasonable runtime I needed to compromise the effective population size down to 100. This also means that any effects due to drift will be exaggerated.
+
+In the following I will provide the proportions of runs with any unknown or false nodes for the no subsampling runs:
+
+```{r}
+treedata_M_nosampling <- read.csv("./data/tree_analysis_data/treedata_M_nosampling.csv")
+colnames(treedata_M_nosampling) <- strsplit(read_lines("./data/tree_analysis_data/headers.txt"), split = ",")[[1]]
+treedata_Y_nosampling <- read.csv("./data/tree_analysis_data/treedata_Y_nosampling.csv")
+colnames(treedata_Y_nosampling) <- strsplit(read_lines("./data/tree_analysis_data/headers.txt"), split = ",")[[1]]
+
+
+treedata_M_nosampling <- treedata_M_nosampling %>% mutate(MARKER = "M")
+treedata_Y_nosampling <- treedata_Y_nosampling %>% mutate(MARKER = "Y")
+treedata_nosampling <- rbind(treedata_M_nosampling, treedata_Y_nosampling)
+
+low_TD = subset(treedata_nosampling, TD <= 200)
+high_TD = subset(treedata_nosampling, TD > 200)
+
+
+"Proportion of runs having unknown and/or false nodes:"
+sum(treedata_nosampling$G_FALSE > 0 | treedata_nosampling$G_UNKNOWN > 0, na.rm = T)/nrow(treedata_nosampling)
+"Proportion of runs with TD <= 200 having unknown and/or false nodes:"
+sum(low_TD$G_FALSE > 0 | low_TD$G_UNKNOWN > 0, na.rm = T)/nrow(low_TD)
+"Proportion of runs with TD > 200 having unknown and/or false nodes:"
+sum(high_TD$G_FALSE > 0 | high_TD$G_UNKNOWN > 0, na.rm = T)/nrow(high_TD)
+
+
+```
+
+We can see that even though this is data for genealogies of entire populations, so the true ancestry for all living individuals, the clustering of the trees is not always representative of the admixture proportions of P3. To note is that this only occurs when TD is low, and even then not frequently. I suspect that given an effective population size there is always a dependent value of TD that is necessary for accurate inferences. Most likely this value would ensure that all P3 lineages originate after the split of P1 and P2.
+
+
 ### Error of using genetic data to construct trees
+
+Now I will compare the inferences from the constructed neighbor_joining trees against the inferences from the recorded genealogies. First I'll provide plot to visualize the differences:
+
+```{r, warning=FALSE}
+ggplot(treedata, aes(x = "Genealogy", y = G_P1)) +
+    geom_boxplot() +
+    geom_boxplot(aes(x = "NJ tree", y = NJ_P1)) +
+    ylab("P1 Estimate") + 
+    xlab("") +
+    theme_bw()
+
+par(mfrow=c(1,3))
+hist(treedata$G_P1-treedata$NJ_P1, main = "", xlab = "Inferred Proportion (G - NJ)")
+hist(treedata$G_FALSE-treedata$NJ_FALSE, main = "", xlab = "False nodes Proportion (G - NJ)")
+hist(treedata$G_UNKNOWN-treedata$NJ_UNKNOWN, main = "", xlab = "Unknown nodes Proportion (G - NJ)")
+```
+
+We can see that the clustering of the constructed phylogenetic trees is almost always the same as the genealogy clustering. A Mann-Whitney-U test also shows no difference in the P1 estimates from genealogies vs neighbor-joining trees: 
+
+```{r}
+df_GvNJ <- data.frame(P1 = c(treedata$G_P1,treedata$NJ_P1), tree = c(rep("G",nrow(treedata)), rep("NJ",nrow(treedata))) )
+wilcox.test(P1 ~ tree, df_GvNJ)
+```
+
+In conclusion this is evidence that the construction of phylogenetic trees from genetic data from the mtDNA and Y-chromosome introduce close to no error at all. The genetic trees are likely very close to the true genealogies of individuals. 
 
 ### Error of sampling individuals
 
+Sampling individuals will obviously always introduce error, since the proportion of the sample most likely will not be the exact same as the entire population. The sampling from a population can be mathematically described by a hypergeometric distribution. This also means that one can calculate the probability of the sampled proportion being within a certain interval around the population proportion. This is done by subtracting the cumulative distribution function (cdf) for X being the lower bound from the cdf for X being the upper bound. Here is an example for calculating the probability of being within +/- 5% around the population proportion for an effective population size (Ne) of 5000, 100 sampled individuals (nS) and an admixture proportion of 0.5 (p1):
+
+```{r, echo=TRUE}
+Ne = 5000
+nS = 100
+p1 = 0.5
+
+phyper((p1+0.05)*nS,Ne*p1,Ne*(1-p1),nS)-phyper((p1-0.05)*nS,Ne*p1,Ne*(1-p1),nS)
+```
+
+Here I will provide a plot of the probability of being within +/- 5% after sampling for the effective population size of 5000 I used in the simulations:
+
+```{r}
+dist_param_df <- expand.grid(p = seq(0, 1, .02),
+                             n = c(10,50,100,500,1000),
+                             N = 5000)
+dist_param_df<- mutate(dist_param_df, p_within5 = phyper((p+0.05)*n,N*p,N*(1-p),n)-phyper((p-0.05)*n,N*p,N*(1-p),n))
+g <- ggplot(dist_param_df, aes(x = p, y = p_within5, col = as.factor(n))) + 
+    theme_bw() +
+    ylab("P(within 5%)") +
+    xlab("p1") +
+    labs(color="nS")
+for (i in unique(dist_param_df$n)) {
+    g <- g + geom_line(data = subset(dist_param_df, n == i))
+}
+g
+```
+
+Using the cdfs of a hypergeometric distribution as described above I computed the probabilities for being in every offset (any +/- percentage interval). Here I plotted the results:
+
+```{r}
+dist_param_df2 <- expand.grid(p = seq(0, .5, .1),
+                             n = c(10,50,100,500,1000,2000),
+                             N = c(5000,1000000),
+                             off= seq(0,.5,0.01))
+dist_param_df2 <- mutate(dist_param_df2, p_off = phyper((p+off)*n,N*p,N*(1-p),n)-phyper((p-off)*n,N*p,N*(1-p),n))
+pl <- ggplot(dist_param_df, aes(x = off*100, y = p_off, col = p)) +
+    xlab("% off") + ylab("P(within off)") +
+    facet_grid(N~n, labeller = label_both) + 
+    theme_bw()
+    
+for (i in unique(dist_param_df2$p)) {
+    pl <- pl + geom_line(data = subset(dist_param_df2, p == i))
+}
+pl
+```
+
+Obviously higher number of samples increases the probability of being near the population proportion. Since quantities of random independent identically distributed (iid) samples are unbiased estimators for the population quantities, they're expected values are the same as the population values. That is way it doesn't matter too much if the population size is like in the simulations 5000 or 1.000.000. In summary we can see that e.g. for being within a 5% interval one would ideally sample 500 individuals or for being within 2.5% 2000 individuals. So this provides clear guidelines on the sample size needed for accurate representation of the population and how to avoid introducing error just by sampling.
+
 ### Error of genetic drift after admixture
 
+In the exploratory analysis I already showed that comparing to the initial state results in higher errors, especially for high TA values. To only look at the effect of genetic drift after admixture I calculated the absolute value of the difference between the initial proportion and the current proportion for all TAs. This is visualized in the following plot:
+
+```{r, warning=FALSE, message=FALSE}
+G_drift <- treedata %>%
+    group_by(TA) %>%
+    summarise(G_drift = abs(INIT_P1 - TRUE_P1))
+ggplot(G_drift,aes(x = as.factor(TA),y=G_drift)) +
+    geom_boxplot() + 
+    theme_bw()
+```
+
+
+We can see that trying to estimate initial admixture proportions is not very accurate unless admixture was very recent (<100 generations). It makes more sense to only make statements about an inferred current proportion, because the effect of genetic drift after admixture is really strong.
+
 ## Conclusion
+
+The data in this report shows, that under some circumstances the inference of admixture proportions from genetic trees is prone to error. Given certain demographic parameters phylogenies cannot reflect the origin of individuals of admixed populations well. I showed that the clustering in trees can be misleading, especially if source populations did not diverge enough, admixture is not recent or the sample size is too small. The construction of phylogenetic trees from genetic data from the mtDNA and Y-chromosome on the contrary introduced no error and seems to result in trees close to genealogies. I showed that in general large sample sizes are needed for accurate inference of admixture proportions and could provide clear guidelines on what sample size is needed. Looking at the drift data I conclude that making inferences of initial admixture proportions can only be close to accurate if admixture is very recent. A better approach is to just make statements about current proportions in a population.
+Overall these findings should raise suspicion on using phylogenetic trees for inference universally disregarding factors like sample size and time spans. This has applications in inferences about admixture proportions, like in these simulations, but also for sex-biased gene flow or using haplogroups as ancestry record of a population.

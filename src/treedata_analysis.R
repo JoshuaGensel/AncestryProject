@@ -111,22 +111,28 @@ NJ_table_Y <- round(dcast(accuracy_df_NJ_Y, TA ~ NS + TD, value.var = "PROP5") *
 #-------------------------------------------------------------------------------
 # estimating error due to tree clustering
 
+# unknown proportion
+
+unknown_runs <- filter(treedata, G_UNKNOWN/NS > 0)
+no_unknown_runs <- filter(treedata, G_UNKNOWN/NS == 0)
+rmse_unknown = sqrt(mean((unknown_runs$TRUE_P1-unknown_runs$G_P1)^2, na.rm = TRUE))
+rmse_no_unknown = sqrt(mean((no_unknown_runs$TRUE_P1-no_unknown_runs$G_P1)^2, na.rm = TRUE))
+
+
 y = (treedata$G_UNKNOWN + treedata$G_FALSE)/treedata$NS
 n = nrow(treedata)
 treedata <- mutate(treedata, G_PROP_MISS = (y*(n-1)+0.5)/n)
 
 library(betareg)
-fit1 <- betareg(G_PROP_MISS ~ 1, data = treedata)
-fit2 <- betareg(G_PROP_MISS ~ TA, data = treedata)
-fit3 <- betareg(G_PROP_MISS ~ TD, data = treedata)
-fit4 <- betareg(G_PROP_MISS ~ TA + TD, data = treedata)
-fit5 <- betareg(G_PROP_MISS ~ TA * TD, data = treedata)
-fit6 <- betareg(G_PROP_MISS ~ TA + TD + NS, data = treedata)
-fit7 <- betareg(G_PROP_MISS ~ TA + TD * NS, data = treedata)
-fit8 <- betareg(G_PROP_MISS ~ TD + TA * NS, data = treedata)
+fit1 <- betareg(G_PROP_MISS ~ 1, data = treedata, link = "logit")
+fit2 <- betareg(G_PROP_MISS ~ TA, data = treedata, link = "logit")
+fit3 <- betareg(G_PROP_MISS ~ TD, data = treedata, link = "logit")
+fit4 <- betareg(G_PROP_MISS ~ NS, data = treedata, link = "logit")
+fit5 <- betareg(G_PROP_MISS ~ TA + TD, data = treedata, link = "logit")
+fit6 <- betareg(G_PROP_MISS ~ TA + NS, data = treedata, link = "logit")
+fit7 <- betareg(G_PROP_MISS ~ TD + TA + NS, data = treedata, link = "logit")
 
-
-G_AIC_table <- data.frame(fit = 1:8, AIC = c(AIC(fit1),AIC(fit2),AIC(fit3),AIC(fit4),AIC(fit5),AIC(fit6),AIC(fit7),AIC(fit8)))
+G_AIC_table <- data.frame(fit = 1:7, AIC = c(AIC(fit1),AIC(fit2),AIC(fit3),AIC(fit4),AIC(fit5),AIC(fit6),AIC(fit7)))
 G_AIC_table[which.min(G_AIC_table$AIC),]
 
 summary(fit7)
@@ -199,9 +205,9 @@ dist_param_df <- expand.grid(p = seq(0, 1, .02),
                              n = c(10,50,100,500,1000),
                              N = 5000)
 dist_param_df<- mutate(dist_param_df, p_within5 = phyper((p+0.05)*n,N*p,N*(1-p),n)-phyper((p-0.05)*n,N*p,N*(1-p),n))
-g <- ggplot(dist_param_df, aes(x = p, y = p_within5, col = as.factor(n))) + 
+g <- ggplot(dist_param_df, aes(x = p, y = p_within5, col = n)) + 
     theme_bw()
-for (i in dist_param_df$n) {
+for (i in unique(dist_param_df$n)) {
     g <- g + geom_line(data = subset(dist_param_df, n == i))
 }
 g
