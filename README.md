@@ -8,20 +8,20 @@ A detailed report of this project can be found [here](https://rpubs.com/JGen/Anc
 
 SLiM = 3.7.1 (conda installation)
 
-python = 3.8.5
-tskit = 0.4.1
-biopython = 1.79
-ete3 = 3.1.2
-msprime = 1.1.0
-pyslim = 0.700
-numpy = 1.19.2
+python = 3.8.5,
+tskit = 0.4.1,
+biopython = 1.79,
+ete3 = 3.1.2,
+msprime = 1.1.0,
+pyslim = 0.700,
+numpy = 1.19.2,
 
-R = 4.2.1
-tidyverse = 1.3.2
-ggplot2 = 3.3.6
-reshape2 = 1.4.4
-betareg = 3.1-4
-imager = 0.42.13
+R = 4.2.1,
+tidyverse = 1.3.2,
+ggplot2 = 3.3.6,
+reshape2 = 1.4.4,
+betareg = 3.1-4,
+imager = 0.42.13,
 
 ## How to run the program
 
